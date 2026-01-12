@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ozon Review Service - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 18px;
+            background: #ecf0f1;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            font-weight: 500;
+        }
+        
+        .status-item:hover {
+            background: white;
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .status-badge {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-badge.inactive {
+            background: #e74c3c;
+            animation: pulse-red 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            50% { opacity: 0.5; box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: #34495e;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #bdc3c7;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn:hover {
+            background: #ecf0f1;
+        }
+        
+        .filter-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        .reviews-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .review-item {
+            border: 1px solid #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            background: #f9fafb;
+            transition: all 0.3s;
+        }
+        
+        .review-item:hover {
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        
+        .review-product {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .review-rating {
+            color: #f39c12;
+            font-size: 14px;
+        }
+        
+        .review-text {
+            color: #555;
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        
+        .review-meta {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge.sentiment-positive {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+        
+        .badge.sentiment-neutral {
+            background: #fef5e7;
+            color: #f39c12;
+        }
+        
+        .badge.sentiment-negative {
+            background: #fadbd8;
+            color: #e74c3c;
+        }
+        
+        .badge.category {
+            background: #ebf5fb;
+            color: #3498db;
+        }
+        
+        .drafts {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        .draft-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-left: 3px solid #3498db;
+            border-radius: 2px;
+        }
+        
+        .draft-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .draft-text {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ecf0f1;
+            padding-bottom: 15px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+        
+        .tab-content {
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Ozon Review Service</h1>
+            <p>Управление отзывами и ответами на маркетплейсе Ozon</p>
+            
+            <div class="status-bar">
+                <div class="status-item" onclick="openSettingsModal('database')" title="Кликни для настроек">
+                    <div class="status-badge" id="db-status"></div>
+                    <span>💾 База данных</span>
+                </div>
+                <div class="status-item" onclick="openSettingsModal('ozon')" title="Кликни для настроек">
+                    <div class="status-badge" id="ozon-status"></div>
+                    <span>🔵 Ozon API</span>
+                </div>
+                <div class="status-item" onclick="openSettingsModal('openai')" title="Кликни для настроек">
+                    <div class="status-badge" id="ai-status"></div>
+                    <span>⚙️ OpenAI API</span>
+                </div>
+                <button class="btn btn-primary" style="padding: 12px 20px; margin-left: auto;" onclick="openSettingsModal('all')">
+                    ⚙️ Полные настройки
+                </button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <!-- Overview Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📊 Обзор</h2>
+                </div>
+                <div class="card-content">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;" id="total-products">0</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Товаров с отзывами</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;" id="total-reviews">0</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Всего отзывов</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;" id="unanswered-reviews">0</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Без ответов</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;" id="avg-rating">0.0</div>
+                            <div style="font-size: 14px; opacity: 0.9;">Средний рейтинг</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📦 Товары</h2>
+                </div>
+                <div class="card-content">
+                    <div id="products-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Загрузка товаров...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reviews Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📋 Новые отзывы</h2>
+                    <button class="btn btn-secondary" onclick="refreshReviews()">
+                        <span id="refresh-icon">🔄</span> Обновить
+                    </button>
+                </div>
+                <div class="card-content">
+                    <div class="filters">
+                        <button class="filter-btn active" data-filter="all" onclick="filterReviews('all')">Все</button>
+                        <button class="filter-btn" data-filter="positive" onclick="filterReviews('positive')">👍 Позитивные</button>
+                        <button class="filter-btn" data-filter="neutral" onclick="filterReviews('neutral')">➡️ Нейтральные</button>
+                        <button class="filter-btn" data-filter="negative" onclick="filterReviews('negative')">👎 Негативные</button>
+                        <button class="filter-btn" data-filter="unanswered" onclick="filterReviews('unanswered')">❓ Без ответов</button>
+                        <button class="filter-btn" data-filter="answered" onclick="filterReviews('answered')">✅ С ответами</button>
+                    </div>
+                    <div class="filters" style="margin-top:10px;">
+                        <span style="font-size:13px;color:#7f8c8d;margin-right:8px;">Сортировка:</span>
+                        <button class="filter-btn active" data-sort="new" onclick="filterSort('new')">🆕 Новые сначала</button>
+                        <button class="filter-btn" data-sort="old" onclick="filterSort('old')">📜 Старые сначала</button>
+                    </div>
+                    
+                    <div id="reviews-container" class="reviews-list">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Нет отзывов для отображения</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📊 История ответов</h2>
+                </div>
+                <div class="card-content">
+                    <div class="filters">
+                        <button class="filter-btn active" onclick="filterResponses('all')">Все</button>
+                        <button class="filter-btn" onclick="filterResponses('sent')">✅ Отправлены</button>
+                        <button class="filter-btn" onclick="filterResponses('draft')">📝 Черновики</button>
+                        <button class="filter-btn" onclick="filterResponses('failed')">❌ Ошибки</button>
+                    </div>
+                    
+                    <div id="responses-container">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Истории ответов нет</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Настройки интеграций</h2>
+                <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <button class="filter-btn active" onclick="switchTab('ozon')" id="tab-ozon">🔵 Ozon API</button>
+                <button class="filter-btn" onclick="switchTab('openai')" id="tab-openai">⚙️ OpenAI API</button>
+                <button class="filter-btn" onclick="switchTab('response')" id="tab-response">📝 Настройки ответов</button>
+            </div>
+            
+            <!-- Ozon Settings -->
+            <div id="tab-content-ozon" class="tab-content">
+                <div class="form-group">
+                    <label>Client ID (Merchant ID)</label>
+                    <input type="text" id="ozon-client-id" placeholder="Твой Client ID">
+                    <small>Получи на: https://seller.ozon.ru/ → Настройки → Ключи API</small>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="ozon-api-key" placeholder="Твой API Key">
+                    <small>Будет зашифрован локально</small>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="testOzonConnection()">🧪 Тестировать подключение</button>
+                    <button class="btn btn-secondary" onclick="saveSettings('ozon')">💾 Сохранить</button>
+                </div>
+                <div id="ozon-status-msg" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
+            </div>
+            
+            <!-- OpenAI Settings -->
+            <div id="tab-content-openai" class="tab-content" style="display: none;">
+                <div class="form-group">
+                    <label>OpenAI API Key</label>
+                    <input type="password" id="openai-api-key" placeholder="sk-...">
+                    <small>Получи на: https://platform.openai.com/api/account/api-keys</small>
+                </div>
+                <div class="form-group">
+                    <label>Модель</label>
+                    <select id="openai-model" onchange="saveModelSelection()">
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo (быстро, дешево)</option>
+                        <option value="gpt-4">gpt-4 (точнее)</option>
+                        <option value="gpt-4-turbo">gpt-4-turbo (баланс)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Статус API</label>
+                    <div id="ai-health-status" style="padding: 12px; background: #ecf0f1; border-radius: 4px; margin-top: 8px;">
+                        <div style="margin-bottom: 8px;">🔄 Проверяю статус...</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="ai-enabled" onchange="toggleAIFeatures()">
+                        Использовать AI для анализа отзывов
+                    </label>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="checkAIHealth()">🧪 Проверить подключение</button>
+                    <button class="btn btn-secondary" onclick="checkOpenAIKey()">🔍 Проверить ключ</button>
+                    <button class="btn btn-secondary" onclick="saveSettings('openai')">💾 Сохранить</button>
+                </div>
+                <div id="openai-status-msg" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
+                <div id="openai-check-result" style="margin-top: 15px; padding: 15px; border-radius: 4px; display: none; border: 1px solid #bdc3c7;"></div>
+            </div>
+            
+            <!-- Response Settings -->
+            <div id="tab-content-response" class="tab-content" style="display: none;">
+                <h3 style="margin-bottom: 20px;">⚙️ Автоматические ответы</h3>
+                
+                <div class="form-group">
+                    <label>Тон ответов</label>
+                    <select id="response-tone">
+                        <option value="friendly">😊 Дружелюбный</option>
+                        <option value="official">📋 Официальный</option>
+                        <option value="formal">🎩 Формальный</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Промт для AI (шаблон ответов)</label>
+                    <textarea id="response-prompt" style="min-height: 100px;" placeholder="Вы - представитель компании, отвечающий на отзывы..."></textarea>
+                    <small style="color: #7f8c8d; display: block; margin-top: 5px;">Пустое поле = использовать стандартный промт для выбранного тона</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Подпись</label>
+                    <textarea id="response-signature" style="min-height: 80px;" placeholder="С уважением,&#10;Команда маркетплейса"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Интервал проверки отзывов (минут)</label>
+                    <input type="number" id="polling-interval" min="5" max="1440" value="30">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="auto-response-enabled">
+                        Автогенерация ответа при новом отзыве
+                    </label>
+                    <small style="color:#7f8c8d; display:block; margin-top:4px;">Создает черновик ответа сразу после появления отзыва</small>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="saveSettings('response')">💾 Сохранить</button>
+                </div>
+                <div id="response-status-msg" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
+                
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ecf0f1;">
+                
+                <h3 style="margin-bottom: 20px;">🧪 Тестирование автоответов</h3>
+                
+                <div class="form-group">
+                    <label>Текст тестового отзыва</label>
+                    <textarea id="test-review-text" style="min-height: 100px;" placeholder="Введите текст отзыва для проверки генерации ответа...
+Например: Спасибо, отличное качество!"></textarea>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="testAutoResponse()">🧪 Протестировать ответ</button>
+                </div>
+                
+                <div id="test-result-box" style="margin-top: 20px; padding: 15px; border-radius: 4px; display: none; border: 1px solid #bdc3c7;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Сгенерированный ответ:</strong>
+                        <div id="test-result-text" style="margin-top: 10px; padding: 12px; background: #f5f7fa; border-radius: 4px; border-left: 4px solid #3498db;"></div>
+                    </div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+                        Режим: <span id="test-result-mode"></span>
+                    </div>
+                </div>
+                <div id="test-error-box" style="margin-top: 20px; padding: 15px; border-radius: 4px; display: none; border-left: 4px solid #e74c3c;">
+                    <div style="color: #e74c3c;"><strong>❌ Ошибка:</strong></div>
+                    <div id="test-error-text" style="margin-top: 8px; font-size: 13px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Response Modal -->
+    <div id="responseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ответить на отзыв</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <form onsubmit="submitResponse(event)">
+                <div class="form-group">
+                    <label>Отзыв клиента:</label>
+                    <div id="review-text-display" style="padding: 10px; background: #f5f7fa; border-radius: 4px; margin-bottom: 10px;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Режим ответа</label>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label><input type="radio" name="response-mode" id="response-mode-manual" value="manual" checked> Пишу сам</label>
+                        <label><input type="radio" name="response-mode" id="response-mode-ai" value="ai"> Сгенерировать нейросетью</label>
+                        <button type="button" class="btn btn-secondary" id="generate-ai-btn" style="display: none; padding: 6px 10px; font-size: 13px;">⚡ Сгенерировать</button>
+                    </div>
+                    <div id="ai-hint" style="display:none; color:#7f8c8d; font-size:12px; margin-top:6px;">Будет подставлен черновик или сгенерирован ответ</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Выберите черновик или отредактируйте текст:</label>
+                    <div id="drafts-container"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ваш ответ:</label>
+                    <textarea id="response-text" required placeholder="Введите ваш ответ на отзыв..."></textarea>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">✅ Отправить</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api';
+        let currentReviewId = null;
+        let currentFilter = 'all';
+        let currentSort = 'new';
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            loadSettings();
+            // Avoid API 400 on first load if Ozon creds are missing; just render existing data
+            loadReviews();
+            loadStats();
+            loadProducts();
+            loadResponses();
+            
+            // Add auto-save to input fields
+            document.getElementById('ozon-client-id')?.addEventListener('change', () => {
+                localStorage.setItem('ozon_client_id', document.getElementById('ozon-client-id').value);
+            });
+            document.getElementById('ozon-api-key')?.addEventListener('change', () => {
+                localStorage.setItem('ozon_api_key', document.getElementById('ozon-api-key').value);
+            });
+            document.getElementById('openai-api-key')?.addEventListener('change', () => {
+                localStorage.setItem('openai_api_key', document.getElementById('openai-api-key').value);
+            });
+            document.getElementById('openai-model')?.addEventListener('change', () => {
+                localStorage.setItem('openai_model', document.getElementById('openai-model').value);
+            });
+            document.getElementById('response-tone')?.addEventListener('change', () => {
+                localStorage.setItem('response_tone', document.getElementById('response-tone').value);
+            });
+            document.getElementById('response-signature')?.addEventListener('change', () => {
+                localStorage.setItem('response_signature', document.getElementById('response-signature').value);
+            });
+            document.getElementById('response-prompt')?.addEventListener('change', () => {
+                localStorage.setItem('response_prompt', document.getElementById('response-prompt').value);
+            });
+            document.getElementById('polling-interval')?.addEventListener('change', () => {
+                localStorage.setItem('polling_interval', document.getElementById('polling-interval').value);
+            });
+            document.getElementById('ai-enabled')?.addEventListener('change', () => {
+                localStorage.setItem('ai_enabled', document.getElementById('ai-enabled').checked);
+            });
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                loadReviews();
+                loadResponses();
+                loadStats();
+                loadProducts();
+            }, 30000);
+        });
+        
+        // Settings Modal Functions
+        function openSettingsModal(tab = 'ozon') {
+            document.getElementById('settingsModal').classList.add('active');
+            if (tab !== 'all') {
+                switchTab(tab);
+            }
+            
+            // Auto-check AI health when opening OpenAI tab
+            if (tab === 'openai') {
+                setTimeout(() => checkAIHealth(), 300);
+            }
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Remove active class from buttons
+            document.querySelectorAll('#settingsModal .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const tabContent = document.getElementById(`tab-content-${tabName}`);
+            if (tabContent) {
+                tabContent.style.display = 'block';
+            }
+            
+            // Add active class to button
+            const tabBtn = document.getElementById(`tab-${tabName}`);
+            if (tabBtn) {
+                tabBtn.classList.add('active');
+            }
+        }
+        
+        async function loadSettings() {
+            try {
+                // Restore from localStorage
+                const savedClientId = localStorage.getItem('ozon_client_id');
+                const savedApiKey = localStorage.getItem('ozon_api_key');
+                const savedOpenAiKey = localStorage.getItem('openai_api_key');
+                const savedModel = localStorage.getItem('openai_model');
+                const savedTone = localStorage.getItem('response_tone');
+                const savedSignature = localStorage.getItem('response_signature');
+                const savedPrompt = localStorage.getItem('response_prompt');
+                const savedInterval = localStorage.getItem('polling_interval');
+                const savedAutoEnabled = localStorage.getItem('auto_response_enabled');
+                const savedAiEnabled = localStorage.getItem('ai_enabled');
+                
+                if (savedClientId) document.getElementById('ozon-client-id').value = savedClientId;
+                if (savedApiKey) document.getElementById('ozon-api-key').value = savedApiKey;
+                if (savedOpenAiKey) document.getElementById('openai-api-key').value = savedOpenAiKey;
+                if (savedModel) document.getElementById('openai-model').value = savedModel;
+                if (savedTone) document.getElementById('response-tone').value = savedTone;
+                if (savedSignature) document.getElementById('response-signature').value = savedSignature;
+                if (savedPrompt) document.getElementById('response-prompt').value = savedPrompt;
+                if (savedInterval) document.getElementById('polling-interval').value = savedInterval;
+                if (savedAutoEnabled !== null) document.getElementById('auto-response-enabled').checked = savedAutoEnabled === 'true';
+                if (savedAiEnabled !== null) document.getElementById('ai-enabled').checked = savedAiEnabled === 'true';
+                
+                // Get server-stored credentials
+                const response = await fetch(`${API_BASE}/settings/ozon/credentials`);
+                if (response.ok) {
+                    const creds = await response.json();
+                    if (creds.client_id && !savedClientId) document.getElementById('ozon-client-id').value = creds.client_id;
+                    if (creds.api_key && !savedApiKey) document.getElementById('ozon-api-key').value = creds.api_key;
+                }
+                
+                // Get server-stored OpenAI credentials 
+                const aiResponse = await fetch(`${API_BASE}/settings/openai/credentials`);
+                if (aiResponse.ok) {
+                    const aiCreds = await aiResponse.json();
+                    if (aiCreds.api_key && !savedOpenAiKey) document.getElementById('openai-api-key').value = aiCreds.api_key;
+                    if (aiCreds.model && !savedModel) document.getElementById('openai-model').value = aiCreds.model;
+                }
+                
+                // Get server-stored auto response config
+                const autoRespResponse = await fetch(`${API_BASE}/settings/auto-response/config`);
+                if (autoRespResponse.ok) {
+                    const autoRespConfig = await autoRespResponse.json();
+                    if (autoRespConfig.tone && !savedTone) document.getElementById('response-tone').value = autoRespConfig.tone;
+                    if (autoRespConfig.signature && !savedSignature) document.getElementById('response-signature').value = autoRespConfig.signature;
+                    if (autoRespConfig.prompt_template && !savedPrompt) document.getElementById('response-prompt').value = autoRespConfig.prompt_template;
+                    if (autoRespConfig.auto_enabled !== undefined && savedAutoEnabled === null) {
+                        document.getElementById('auto-response-enabled').checked = !!autoRespConfig.auto_enabled;
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading settings:', e);
+            }
+        }
+        
+        function saveSettings(type) {
+            // Fire and forget - non-blocking
+            (async () => {
+                const msgElement = document.getElementById(`${type}-status-msg`);
+                
+                if (!msgElement) {
+                    console.error(`No message element found for type: ${type}`);
+                    return;
+                }
+                
+                try {
+                    if (type === 'ozon') {
+                        const clientId = document.getElementById('ozon-client-id').value;
+                        const apiKey = document.getElementById('ozon-api-key').value;
+                        
+                        if (!clientId || !apiKey) {
+                            showMessage(msgElement, '❌ Заполни оба поля!', 'error');
+                            return;
+                        }
+                        
+                        // Store locally and send to backend for persistence
+                        localStorage.setItem('ozon_client_id', clientId);
+                        localStorage.setItem('ozon_api_key', apiKey);
+
+                        await fetch(`${API_BASE}/settings/ozon/credentials`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ client_id: clientId, api_key: apiKey })
+                        });
+                        
+                        showMessage(msgElement, '✅ Настройки Ozon сохранены (сервер + браузер)', 'success');
+                        checkStatus();
+                        
+                    } else if (type === 'openai') {
+                        const apiKey = document.getElementById('openai-api-key').value;
+                        const model = document.getElementById('openai-model')?.value || 'gpt-3.5-turbo';
+                        
+                        if (!apiKey) {
+                            showMessage(msgElement, '❌ Укажи API Key!', 'error');
+                            return;
+                        }
+                        
+                        // Store locally and send to backend for persistence
+                        localStorage.setItem('openai_api_key', apiKey);
+                        localStorage.setItem('openai_model', model);
+                        localStorage.setItem('ai_enabled', document.getElementById('ai-enabled').checked);
+
+                        await fetch(`${API_BASE}/settings/openai/credentials`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: apiKey, model: model })
+                        });
+                        
+                        showMessage(msgElement, '✅ Настройки OpenAI сохранены (сервер + браузер)', 'success');
+                        checkStatus();
+                        checkAIHealth();
+                        
+                        
+                    } else if (type === 'response') {
+                        const tone = document.getElementById('response-tone').value;
+                        const signature = document.getElementById('response-signature').value;
+                        const prompt = document.getElementById('response-prompt').value;
+                        const interval = document.getElementById('polling-interval').value;
+                        const autoEnabled = document.getElementById('auto-response-enabled').checked;
+                        
+                        if (!tone || !signature || !interval) {
+                            showMessage(msgElement, '❌ Заполни обязательные поля!', 'error');
+                            return;
+                        }
+                        
+                        localStorage.setItem('response_tone', tone);
+                        localStorage.setItem('response_signature', signature);
+                        localStorage.setItem('response_prompt', prompt);
+                        localStorage.setItem('polling_interval', interval);
+                        localStorage.setItem('auto_response_enabled', autoEnabled);
+                        
+                        // Send to backend for persistence (auto-response config)
+                        await fetch(`${API_BASE}/settings/auto-response/config`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                tone: tone,
+                                signature: signature,
+                                prompt_template: prompt,
+                                auto_enabled: autoEnabled
+                            })
+                        });
+                        
+                        // Also send polling interval to response/config
+                        await fetch(`${API_BASE}/settings/response/config`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                tone: tone,
+                                signature: signature,
+                                polling_interval: parseInt(interval)
+                            })
+                        });
+                        
+                        showMessage(msgElement, '✅ Все настройки сохранены (сервер + браузер)', 'success');
+                    }
+                } catch (e) {
+                    showMessage(msgElement, '❌ Ошибка при сохранении!', 'error');
+                }
+            })();
+        }
+        
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.style.display = 'block';
+            element.style.background = type === 'success' ? '#d5f4e6' : '#fadbd8';
+            element.style.color = type === 'success' ? '#27ae60' : '#e74c3c';
+            element.style.border = `1px solid ${type === 'success' ? '#27ae60' : '#e74c3c'}`;
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+        
+        function testOzonConnection() {
+            // Fire and forget - non-blocking
+            (async () => {
+                const clientId = document.getElementById('ozon-client-id').value;
+                const apiKey = document.getElementById('ozon-api-key').value;
+                const msgElement = document.getElementById('ozon-status-msg');
+                
+                if (!clientId || !apiKey) {
+                    showMessage(msgElement, '❌ Заполни Client ID и API Key!', 'error');
+                    return;
+                }
+                
+                showMessage(msgElement, '🔄 Тестирую подключение...', 'info');
+                
+                try {
+                    const response = await fetch('/api/health/test-ozon', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            client_id: clientId,
+                            api_key: apiKey
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        showMessage(msgElement, '✅ Подключение к Ozon работает!', 'success');
+                        document.getElementById('ozon-status').classList.remove('inactive');
+                        localStorage.setItem('ozon_client_id', clientId);
+                        localStorage.setItem('ozon_api_key', apiKey);
+                    } else {
+                        showMessage(msgElement, data.message || '❌ Ошибка подключения', 'error');
+                        document.getElementById('ozon-status').classList.add('inactive');
+                    }
+                } catch (error) {
+                    showMessage(msgElement, '❌ Ошибка: ' + error.message, 'error');
+                    document.getElementById('ozon-status').classList.add('inactive');
+                }
+            })();
+        }
+        
+        function testOpenAIConnection() {
+            // Fire and forget - non-blocking
+            (async () => {
+                const apiKey = document.getElementById('openai-api-key').value;
+                const msgElement = document.getElementById('openai-status-msg');
+                
+                if (!apiKey) {
+                    showMessage(msgElement, '❌ Заполни API Key!', 'error');
+                    return;
+                }
+                
+                showMessage(msgElement, '🔄 Тестирую подключение...', 'info');
+                
+                try {
+                    const response = await fetch('/api/health/test-openai', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            api_key: apiKey
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        showMessage(msgElement, '✅ Подключение к OpenAI работает!', 'success');
+                        document.getElementById('openai-status').classList.remove('inactive');
+                        localStorage.setItem('openai_api_key', apiKey);
+                    } else {
+                        showMessage(msgElement, data.message || '❌ Ошибка подключения', 'error');
+                        document.getElementById('openai-status').classList.add('inactive');
+                    }
+                } catch (error) {
+                    showMessage(msgElement, '❌ Ошибка: ' + error.message, 'error');
+                    document.getElementById('openai-status').classList.add('inactive');
+                }
+            })();
+        }
+        
+        function checkAIHealth() {
+            // Fire and forget - run in background
+            (async () => {
+                const msgElement = document.getElementById('ai-health-status');
+                msgElement.innerHTML = '<div>🔄 Проверяю статус API...</div>';
+                
+                try {
+                    const response = await fetch('/api/settings/health/models');
+                    const health = await response.json();
+                    
+                    let html = '<div style="font-size: 14px;">';
+                    
+                    // API availability
+                    const apiStatus = health.available ? '✅ Работает' : '❌ Недоступна';
+                    html += `<div>API: ${apiStatus}</div>`;
+                    
+                    // API Key
+                    const keyStatus = health.api_key_set ? '✅ Установлен' : '❌ Не установлен';
+                    html += `<div>Ключ: ${keyStatus}</div>`;
+                    
+                    // Current model
+                    html += `<div>Модель: <strong>${health.current_model}</strong></div>`;
+                    
+                    // Fallback mode notice
+                    if (health.fallback_mode) {
+                        html += `<div style="color: #f39c12; margin-top: 8px; padding: 8px; background: #fef5e7; border-radius: 4px;">⚠️ Режим без генерации AI. Вы можете писать ответы вручную.</div>`;
+                    }
+                    
+                    // Quota
+                    if (health.quota_exceeded) {
+                        html += `<div style="color: #e74c3c; margin-top: 8px; padding: 8px; background: #fadbd8; border-radius: 4px;">⚠️ Квота исчерпана! Нужно пополнить счёт.</div>`;
+                    } else if (health.available) {
+                        html += `<div style="color: #27ae60; margin-top: 8px; padding: 8px; background: #d5f4e6; border-radius: 4px;">✅ Квота доступна</div>`;
+                    }
+                    
+                    if (health.error) {
+                        html += `<div style="color: #e74c3c; margin-top: 8px; font-size: 12px;">⚠️ ${health.error}</div>`;
+                    }
+                    
+                    html += '</div>';
+                    msgElement.innerHTML = html;
+                    
+                    if (health.quota_exceeded) {
+                        showMessage(document.getElementById('openai-status-msg'), 
+                            '⚠️ Квота исчерпана. Пополни счёт на platform.openai.com', 'error');
+                    }
+                    
+                } catch (error) {
+                    msgElement.innerHTML = `<div style="color: #e74c3c;">❌ Ошибка при проверке: ${error.message}</div>`;
+                }
+            })();
+        }
+        
+        function saveModelSelection() {
+            // Fire and forget - don't wait for response
+            (async () => {
+                const model = document.getElementById('openai-model').value;
+                
+                try {
+                    const response = await fetch(`/api/settings/models/${model}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        localStorage.setItem('openai_model', model);
+                        console.log(`✅ Модель изменена на ${model}`);
+                        checkAIHealth();
+                    } else {
+                        console.error('Ошибка при смене модели');
+                    }
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                }
+            })();
+        }
+        
+        function toggleAIFeatures() {
+            // Fire and forget - don't wait for response
+            (async () => {
+                const enabled = document.getElementById('ai-enabled').checked;
+                
+                try {
+                    const response = await fetch(`/api/settings/ai/toggle?enabled=${enabled}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        localStorage.setItem('ai_enabled', enabled);
+                        console.log(`AI features ${enabled ? 'enabled' : 'disabled'}`);
+                        checkStatus();
+                    }
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                }
+            })();
+        }
+        
+        function checkOpenAIKey() {
+            // Check OpenAI API key with detailed diagnosis
+            (async () => {
+                const apiKey = document.getElementById('openai-api-key').value;
+                const model = document.getElementById('openai-model').value;
+                const resultElement = document.getElementById('openai-check-result');
+                
+                if (!apiKey) {
+                    resultElement.innerHTML = '<div style="color: #e74c3c;">❌ Введите API ключ сначала!</div>';
+                    resultElement.style.display = 'block';
+                    return;
+                }
+                
+                resultElement.innerHTML = '<div style="color: #95a5a6;">🔄 Проверяю ключ...</div>';
+                resultElement.style.display = 'block';
+                
+                try {
+                    const response = await fetch(`${API_BASE}/settings/openai/check-key`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ api_key: apiKey, model: model })
+                    });
+                    
+                    const result = await response.json();
+                    let html = '';
+                    
+                    if (result.status === 'success') {
+                        html = `
+                            <div style="color: #27ae60; background: #d5f4e6; padding: 12px; border-radius: 4px; border-left: 4px solid #27ae60;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">✅ ${result.message}</div>
+                                <div>Модель: <strong>${result.model}</strong></div>
+                                <div>Использовано токенов: <strong>${result.tokens_used}</strong></div>
+                            </div>
+                        `;
+                    } else if (result.status === 'auth_error') {
+                        html = `
+                            <div style="color: #e74c3c; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #e74c3c;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">❌ ${result.message}</div>
+                                <div style="font-size: 13px; margin-top: 8px;">${result.details}</div>
+                            </div>
+                        `;
+                    } else if (result.status === 'quota_error') {
+                        html = `
+                            <div style="color: #e67e22; background: #fdebd0; padding: 12px; border-radius: 4px; border-left: 4px solid #e67e22;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">⚠️ ${result.message}</div>
+                                <div style="font-size: 13px; margin-top: 8px;">${result.details}</div>
+                            </div>
+                        `;
+                    } else if (result.status === 'model_error') {
+                        html = `
+                            <div style="color: #f39c12; background: #fef5e7; padding: 12px; border-radius: 4px; border-left: 4px solid #f39c12;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">⚠️ ${result.message}</div>
+                                <div style="font-size: 13px; margin-top: 8px;">${result.details}</div>
+                            </div>
+                        `;
+                    } else {
+                        html = `
+                            <div style="color: #c0392b; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #c0392b;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">❌ ${result.message}</div>
+                                <div style="font-size: 12px; margin-top: 8px;">Деталь: ${result.details}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    resultElement.innerHTML = html;
+                    
+                } catch (error) {
+                    resultElement.innerHTML = `<div style="color: #e74c3c; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #e74c3c;">❌ Ошибка при проверке: ${error.message}</div>`;
+                }
+            })();
+        }
+        
+        function checkStatus() {
+            // Fire and forget - run in background
+            (async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/health/integrations`);
+                    const data = await response.json();
+                    
+                    // Update database status (always connected if app is running)
+                    document.getElementById('db-status').classList.remove('inactive');
+                    
+                    // Update Ozon status
+                    if (data.ozon_api && data.ozon_api.configured) {
+                        document.getElementById('ozon-status').classList.remove('inactive');
+                    } else {
+                        document.getElementById('ozon-status').classList.add('inactive');
+                    }
+                    
+                    // Update OpenAI status
+                    if (data.openai_api && data.openai_api.configured) {
+                        document.getElementById('ai-status').classList.remove('inactive');
+                    } else {
+                        document.getElementById('ai-status').classList.add('inactive');
+                    }
+                } catch (e) {
+                    console.error('Error checking status:', e);
+                    document.getElementById('ozon-status').classList.add('inactive');
+                    document.getElementById('ai-status').classList.add('inactive');
+                }
+            })();
+        }
+        
+        function testAutoResponse() {
+            // Test auto response generation
+            (async () => {
+                const reviewText = document.getElementById('test-review-text').value;
+                const tone = document.getElementById('response-tone').value;
+                const prompt = document.getElementById('response-prompt').value;
+                const signature = document.getElementById('response-signature').value;
+                
+                const resultBox = document.getElementById('test-result-box');
+                const errorBox = document.getElementById('test-error-box');
+                
+                if (!reviewText || reviewText.trim().length < 3) {
+                    errorBox.style.display = 'block';
+                    document.getElementById('test-error-text').textContent = 'Введите текст отзыва (минимум 3 символа)';
+                    resultBox.style.display = 'none';
+                    return;
+                }
+                
+                // Show loading state
+                resultBox.innerHTML = '<div style="color: #95a5a6;">⏳ Генерирую ответ...</div>';
+                resultBox.style.display = 'block';
+                errorBox.style.display = 'none';
+                
+                try {
+                    const response = await fetch(`${API_BASE}/settings/auto-response/test`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            review_text: reviewText,
+                            tone: tone,
+                            prompt_template: prompt,
+                            signature: signature
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || 'Ошибка при генерации');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    // Display result
+                    resultBox.innerHTML = `
+                        <div style="margin-bottom: 10px;">
+                            <strong>Сгенерированный ответ:</strong>
+                            <div id="test-result-text" style="margin-top: 10px; padding: 12px; background: #f5f7fa; border-radius: 4px; border-left: 4px solid #3498db; white-space: pre-wrap; line-height: 1.6;"></div>
+                        </div>
+                        <div style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+                            Режим: <span id="test-result-mode"></span>
+                        </div>
+                    `;
+                    
+                    document.getElementById('test-result-text').textContent = result.text;
+                    
+                    // Show mode
+                    const modeText = result.mode === 'ai' ? '🤖 AI (OpenAI)' : '⚡ Fallback (встроенный)';
+                    const modeColor = result.mode === 'ai' ? '#27ae60' : '#f39c12';
+                    document.getElementById('test-result-mode').innerHTML = `<span style="color: ${modeColor}; font-weight: bold;">${modeText}</span>`;
+                    
+                    resultBox.style.display = 'block';
+                    errorBox.style.display = 'none';
+                    
+                } catch (error) {
+                    errorBox.style.display = 'block';
+                    document.getElementById('test-error-text').textContent = error.message;
+                    resultBox.style.display = 'none';
+                }
+            })();
+        }
+
+        function loadStats() {
+            // Fire and forget - non-blocking
+            (async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/reviews/stats`);
+                    if (!response.ok) return;
+                    const stats = await response.json();
+                    updateStatistics(stats);
+                } catch (e) {
+                    console.error('Error loading stats:', e);
+                }
+            })();
+        }
+
+        function syncReviewsFromOzon() {
+            // Fire and forget - returns promise
+            return (async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/reviews/sync`, { method: 'POST' });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Sync failed:', errorText);
+                        return null;
+                    }
+                    return await response.json();
+                } catch (e) {
+                    console.error('Error syncing reviews:', e);
+                    return null;
+                }
+            })();
+        }
+
+        function refreshReviews() {
+            // Fire and forget - non-blocking
+            (async () => {
+                try {
+                    await syncReviewsFromOzon();
+                    loadReviews();
+                    loadStats();
+                    loadProducts();
+                } catch (e) {
+                    console.error('Error in refreshReviews:', e);
+                }
+            })();
+        }
+        
+        function loadReviews() {
+            // Fire and forget - non-blocking
+            (async () => {
+                try {
+                    const params = new URLSearchParams();
+                    params.set('limit', '100');
+                    if (currentFilter === 'unanswered') {
+                        params.set('answered', 'false');
+                    } else if (currentFilter === 'answered') {
+                        params.set('answered', 'true');
+                    }
+                    params.set('sort', currentSort === 'old' ? 'old' : 'new');
+
+                    const response = await fetch(`${API_BASE}/reviews?${params.toString()}`);
+                    const reviews = await response.json();
+                    
+                    const container = document.getElementById('reviews-container');
+                    
+                    if (reviews.length === 0) {
+                        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Нет отзывов</p></div>';
+                        return;
+                    }
+                    
+                    let filtered = reviews;
+                    if (['positive','neutral','negative'].includes(currentFilter)) {
+                        filtered = reviews.filter(r => r.sentiment === currentFilter);
+                    }
+                    
+                    // Limit displayed reviews to 20, with "Show more" button
+                    const reviewsToShow = 20;
+                    const displayedReviews = filtered.slice(0, reviewsToShow);
+                    const hasMore = filtered.length > reviewsToShow;
+                    
+                    container.innerHTML = displayedReviews.map(review => {
+                        const sku = review.sku || review.product_id || review.ozon_review_id;
+                        const published = review.published_at || review.created_at;
+                        return `
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div>
+                                    <div class="review-product">${escapeHtml(review.product_name || 'SKU: ' + sku)}</div>
+                                    <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    ${review.answered ? '<span class="badge category">✅ Ответ отправлен</span>' : '<span class="badge sentiment-negative">❌ Без ответа</span>'}
+                                </div>
+                            </div>
+                            
+                            <div class="review-text">"${escapeHtml(review.text)}"</div>
+                            
+                            <div class="review-meta">
+                                <span>👤 ${escapeHtml(review.customer_name || 'Покупатель')}</span>
+                                <span>📅 ${published ? new Date(published).toLocaleDateString('ru-RU') : '—'}</span>
+                                <span>📦 SKU: ${sku || '—'}</span>
+                            </div>
+                            
+                            ${!review.answered ? `<div class="action-buttons">
+                                <button class="btn btn-primary response-btn"
+                                    data-review-id="${escapeHtml(String(review.id))}"
+                                    data-review-text="${encodeURIComponent(review.text || '')}">
+                                    ✍️ Ответить
+                                </button>
+                            </div>` : ''}
+                        </div>
+                    `}).join('');
+                    
+                    // Add "Show more" button if needed
+                    if (hasMore) {
+                        container.innerHTML += `
+                            <div style="text-align: center; padding: 20px;">
+                                <button class="btn btn-secondary" onclick="loadAllReviews()">
+                                    📖 Показать все (${filtered.length})
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    // Attach handlers to newly rendered buttons
+                    attachResponseButtonHandlers();
+                    
+                } catch (e) {
+                    console.error('Error loading reviews:', e);
+                }
+            })();
+        }
+        
+        function loadAllReviews() {
+            // Fire and forget - non-blocking
+            (async () => {
+                try {
+                    const params = new URLSearchParams();
+                    params.set('limit', '1000');
+                    if (currentFilter === 'unanswered') {
+                        params.set('answered', 'false');
+                    } else if (currentFilter === 'answered') {
+                        params.set('answered', 'true');
+                    }
+                    params.set('sort', currentSort === 'old' ? 'old' : 'new');
+
+                    const response = await fetch(`${API_BASE}/reviews?${params.toString()}`);
+                    const reviews = await response.json();
+                    
+                    const container = document.getElementById('reviews-container');
+                    
+                    let filtered = reviews;
+                    if (['positive','neutral','negative'].includes(currentFilter)) {
+                        filtered = reviews.filter(r => r.sentiment === currentFilter);
+                    }
+                    
+                    container.innerHTML = filtered.map(review => {
+                        const sku = review.sku || review.product_id || review.ozon_review_id;
+                        const published = review.published_at || review.created_at;
+                        return `
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div>
+                                    <div class="review-product">${escapeHtml(review.product_name || 'SKU: ' + sku)}</div>
+                                    <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    ${review.answered ? '<span class="badge category">✅ Ответ отправлен</span>' : '<span class="badge sentiment-negative">❌ Без ответа</span>'}
+                                </div>
+                            </div>
+                            
+                            <div class="review-text">"${escapeHtml(review.text)}"</div>
+                            
+                            <div class="review-meta">
+                                <span>👤 ${escapeHtml(review.customer_name || 'Покупатель')}</span>
+                                <span>📅 ${published ? new Date(published).toLocaleDateString('ru-RU') : '—'}</span>
+                                <span>📦 SKU: ${sku || '—'}</span>
+                            </div>
+                            
+                            ${!review.answered ? `<div class="action-buttons">
+                                <button class="btn btn-primary response-btn"
+                                    data-review-id="${escapeHtml(String(review.id))}"
+                                    data-review-text="${encodeURIComponent(review.text || '')}">
+                                    ✍️ Ответить
+                                </button>
+                            </div>` : ''}
+                        </div>
+                    `}).join('');
+                    
+                    // Add collapse button
+                    container.innerHTML += `
+                        <div style="text-align: center; padding: 20px;">
+                            <button class="btn btn-secondary" onclick="loadReviews()">
+                                🔼 Свернуть
+                            </button>
+                        </div>
+                    `;
+
+                    // Attach handlers to newly rendered buttons
+                    attachResponseButtonHandlers();
+                } catch (e) {
+                    console.error('Error loading all reviews:', e);
+                }
+            })();
+        }
+        
+        function updateStatistics(stats) {
+            document.getElementById('total-products').textContent = stats.products ?? 0;
+            document.getElementById('total-reviews').textContent = stats.total_reviews ?? 0;
+            document.getElementById('unanswered-reviews').textContent = stats.unanswered ?? 0;
+            document.getElementById('avg-rating').textContent = (stats.avg_rating ?? 0).toFixed ? stats.avg_rating.toFixed(1) : stats.avg_rating;
+        }
+        
+        function loadProducts() {
+            // Fire and forget - non-blocking
+            (async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/reviews/products`);
+                    if (!response.ok) return;
+                    const products = await response.json();
+                    renderProducts(products);
+                } catch (e) {
+                    console.error('Error loading products:', e);
+                }
+            })();
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById('products-container');
+            const top = products.slice(0, 12);
+            
+            if (top.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;"><div class="empty-state-icon">📭</div><p>Нет товаров с отзывами</p></div>';
+                return;
+            }
+            
+            container.innerHTML = top.map(product => {
+                const sku = product.sku || '';
+                const customName = localStorage.getItem(`product_name_${sku}`);
+                const name = customName || product.name || `Товар ${String(sku).substring(0, 8)}`;
+                const answered = (product.reviews || 0) - (product.unanswered || 0);
+                const progress = product.reviews ? ((answered / product.reviews) * 100) : 0;
+                return `
+                <div style="border: 1px solid #ecf0f1; border-radius: 8px; padding: 15px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                    <div style="font-weight: 600; margin-bottom: 5px; color: #2c3e50; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="product-name-${sku}" style="flex: 1;">${escapeHtml(name)}</span>
+                        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="editProductName('${sku}')">✏️</button>
+                    </div>
+                    <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 10px; word-break: break-all;">ID: ${String(sku).substring(0, 12)}...</div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-size: 14px; color: #555;">⭐ ${(product.avg_rating ?? product.avgRating ?? 0).toFixed ? (product.avg_rating ?? product.avgRating ?? 0).toFixed(1) : (product.avg_rating ?? product.avgRating ?? 0)}</div>
+                            <div style="font-size: 11px; color: #95a5a6;">${product.reviews || 0} отзывов</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 14px; color: #e74c3c;">❌ ${product.unanswered || 0}</div>
+                            <div style="font-size: 11px; color: #95a5a6;">без ответов</div>
+                        </div>
+                    </div>
+                    
+                    <div style="width: 100%; height: 4px; background: #ecf0f1; border-radius: 2px; overflow: hidden;">
+                        <div style="width: ${progress}%; height: 100%; background: #27ae60;"></div>
+                    </div>
+                    <div style="font-size: 11px; color: #27ae60; margin-top: 5px;">
+                        ${answered} / ${product.reviews || 0} отвечено
+                    </div>
+                </div>
+            `;}).join('');
+        }
+        
+        function loadResponses() {
+            // Fire and forget - non-blocking
+            (async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/responses/history/recent?limit=20`);
+                    const responses = await response.json();
+                    
+                    const container = document.getElementById('responses-container');
+                    
+                    if (responses.length === 0) {
+                        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Истории ответов нет</p></div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = responses.map(r => `
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div>
+                                    <div class="review-product">Ответ #${r.id}</div>
+                                    <span class="badge sentiment-${statusColor(r.status)}">${r.status}</span>
+                                </div>
+                                <div style="text-align: right; font-size: 13px; color: #7f8c8d;">
+                                    ${new Date(r.created_at).toLocaleDateString('ru-RU')} ${new Date(r.created_at).toLocaleTimeString('ru-RU')}
+                                </div>
+                            </div>
+                            <div class="review-text">"${escapeHtml(r.text)}"</div>
+                            ${r.error_message ? `<div style="color: #e74c3c; margin-top: 10px;">Ошибка: ${escapeHtml(r.error_message)}</div>` : ''}
+                        </div>
+                    `).join('');
+                    
+                } catch (e) {
+                    console.error('Error loading responses:', e);
+                }
+            })();
+        }
+        
+        function filterReviews(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filters .filter-btn[data-filter]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+            loadReviews();
+        }
+
+        function filterSort(sort) {
+            currentSort = sort === 'old' ? 'old' : 'new';
+            document.querySelectorAll('.filters .filter-btn[data-sort]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === currentSort);
+            });
+            loadReviews();
+        }
+        
+        function filterResponses(status) {
+            // TODO: Implement status filtering
+            document.querySelectorAll('.card-content .filters .filter-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', btn.textContent.includes(status.charAt(0).toUpperCase() + status.slice(1)));
+            });
+        }
+
+        function attachResponseButtonHandlers() {
+            const buttons = document.querySelectorAll('.response-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.handlerAttached === '1') return;
+                btn.dataset.handlerAttached = '1';
+                btn.addEventListener('click', function() {
+                    const reviewId = this.dataset.reviewId;
+                    let reviewText = '';
+                    try {
+                        reviewText = decodeURIComponent(this.dataset.reviewText || '');
+                    } catch (e) {
+                        reviewText = this.dataset.reviewText || '';
+                    }
+                    openResponseModal(reviewId, reviewText);
+                });
+            });
+        }
+        
+        function setupResponseModeListeners() {
+            const modeRadios = document.querySelectorAll('input[name="response-mode"]');
+            modeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const generateBtn = document.getElementById('generate-ai-btn');
+                    const aiHint = document.getElementById('ai-hint');
+
+                    if (this.value === 'ai') {
+                        generateBtn.style.display = 'inline-block';
+                        aiHint.style.display = 'block';
+                        document.getElementById('response-text').placeholder = 'Здесь появится сгенерированный ответ...';
+                    } else {
+                        generateBtn.style.display = 'none';
+                        aiHint.style.display = 'none';
+                        document.getElementById('response-text').placeholder = 'Введите ваш ответ...';
+                    }
+                });
+            });
+        }
+
+        function openResponseModal(reviewId, reviewText) {
+            currentReviewId = reviewId;
+            document.getElementById('review-text-display').textContent = reviewText;
+            document.getElementById('response-text').value = '';
+            document.getElementById('drafts-container').innerHTML = '';
+            document.getElementById('responseModal').classList.add('active');
+
+            // Reset mode UI
+            document.getElementById('response-mode-manual').checked = true;
+            document.getElementById('response-mode-ai').checked = false;
+            document.getElementById('generate-ai-btn').style.display = 'none';
+            document.getElementById('ai-hint').style.display = 'none';
+            
+            // Add event listeners for mode switching
+            setupResponseModeListeners();
+
+            // Load drafts in background (non-blocking)
+            (async function loadDrafts() {
+                try {
+                    const response = await fetch(API_BASE + '/responses/drafts/' + reviewId);
+                    const container = document.getElementById('drafts-container');
+                    if (!response.ok) {
+                        container.innerHTML = '<div style="color:#7f8c8d; font-size:13px;">Черновиков пока нет</div>';
+                        return;
+                    }
+
+                    const drafts = await response.json();
+                    if (!Array.isArray(drafts) || drafts.length === 0) {
+                        container.innerHTML = '<div style="color:#7f8c8d; font-size:13px;">Черновиков пока нет</div>';
+                        return;
+                    }
+
+                    container.innerHTML = drafts.map(function(draft) {
+                        const safeText = escapeHtml(draft.text || '');
+                        var btnText = safeText.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                        return '<div class="draft-item"><div class="draft-label">Вариант ' + draft.variant_number + '</div><div class="draft-text">' + safeText + '</div><button type="button" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="selectDraft(\'' + btnText + '\')">Использовать</button></div>';
+                    }).join('');
+                } catch (e) {
+                    console.error('Error loading drafts:', e);
+                    document.getElementById('drafts-container').innerHTML = '<div style="color:#e74c3c; font-size:13px;">Не удалось загрузить черновики</div>';
+                }
+            })();
+        }
+
+        function selectDraft(text) {
+            document.getElementById('response-text').value = text;
+            document.getElementById('response-text').focus();
+        }
+
+        // Generate/fill AI answer
+        document.getElementById('generate-ai-btn').addEventListener('click', async function() {
+            if (!currentReviewId) return;
+            
+            const reviewText = document.getElementById('review-text-display').textContent.trim();
+            if (!reviewText) {
+                alert('❌ Ошибка: текст отзыва не найден');
+                return;
+            }
+
+            const btn = document.getElementById('generate-ai-btn');
+            btn.disabled = true;
+            btn.textContent = '⚡ Генерирую...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/settings/auto-response/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        review_text: reviewText
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Ошибка при генерации');
+                }
+
+                const result = await response.json();
+                
+                // Extract the actual response text
+                let aiResponseText = result.response || result.text || '';
+                if (typeof result === 'object' && result.response_text) {
+                    aiResponseText = result.response_text;
+                }
+
+                if (!aiResponseText) {
+                    throw new Error('Нет ответа от сервера');
+                }
+
+                // Populate textarea with generated response
+                document.getElementById('response-text').value = aiResponseText;
+                
+                // Show success message with mode info
+                const modeInfo = result.mode ? ` (${result.mode})` : '';
+                showNotification(`✅ Ответ сгенерирован${modeInfo}`, 'success', 3000);
+
+            } catch (err) {
+                console.error('AI generate error', err);
+                alert(`❌ Ошибка: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Сгенерировать';
+            }
+        });
+
+
+        function closeModal() {
+            document.getElementById('responseModal').classList.remove('active');
+            currentReviewId = null;
+        }
+        
+        function submitResponse(event) {
+            event.preventDefault();
+            
+            // Fire and forget - non-blocking
+            (async () => {
+                const text = document.getElementById('response-text').value;
+                
+                try {
+                    const response = await fetch(`${API_BASE}/responses`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            review_id: currentReviewId,
+                            text: text
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        closeModal();
+                        loadReviews();
+                        loadResponses();
+                        alert('✅ Ответ успешно отправлен!');
+                    } else {
+                        alert('❌ Ошибка при отправке ответа');
+                    }
+                } catch (e) {
+                    console.error('Error submitting response:', e);
+                    alert('❌ Ошибка: ' + e.message);
+                }
+            })();
+        }
+        
+        function sentimentText(sentiment) {
+            const map = { 'positive': '👍 Позитив', 'neutral': '➡️ Нейтрально', 'negative': '👎 Негатив' };
+            return map[sentiment] || sentiment;
+        }
+        
+        function statusColor(status) {
+            const map = { 'sent': 'positive', 'draft': 'neutral', 'failed': 'negative' };
+            return map[status] || 'neutral';
+        }
+
+        function showNotification(message, type = 'info', timeout = 2000) {
+            try {
+                const existing = document.getElementById('toast-notify');
+                if (existing) existing.remove();
+
+                const el = document.createElement('div');
+                el.id = 'toast-notify';
+                el.textContent = message;
+                el.style.position = 'fixed';
+                el.style.top = '12px';
+                el.style.right = '12px';
+                el.style.padding = '10px 14px';
+                el.style.borderRadius = '6px';
+                el.style.zIndex = '9999';
+                el.style.fontSize = '14px';
+                el.style.color = '#fff';
+                el.style.boxShadow = '0 4px 10px rgba(0,0,0,0.15)';
+
+                const colors = {
+                    success: '#27ae60',
+                    error: '#e74c3c',
+                    info: '#3498db',
+                    warning: '#f39c12'
+                };
+                el.style.background = colors[type] || colors.info;
+
+                document.body.appendChild(el);
+                setTimeout(() => {
+                    el.remove();
+                }, timeout);
+            } catch (e) {
+                // fallback
+                alert(message);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function editProductName(sku) {
+            event.stopPropagation();
+            const currentName = document.getElementById(`product-name-${sku}`).textContent;
+            const newName = prompt('Введите новое название товара:', currentName);
+            
+            if (newName && newName.trim()) {
+                localStorage.setItem(`product_name_${sku}`, newName.trim());
+                document.getElementById(`product-name-${sku}`).textContent = escapeHtml(newName.trim());
+            }
+        }
+    </script>
+</body>
+</html>

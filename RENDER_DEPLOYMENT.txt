@@ -1,0 +1,100 @@
+# RENDER.COM DEPLOYMENT GUIDE
+
+Для развёртывания на Render.com следуйте этим шагам:
+
+## 1. Подготовка к деплою
+
+Убедитесь что в проекте есть:
+- ✅ requirements.txt (установлены зависимости)
+- ✅ Procfile (указано как запустить приложение)
+- ✅ .env.example (примеры переменных окружения)
+- ✅ .gitignore (содержит .env и __pycache__)
+
+## 2. На Render.com
+
+### Шаг 1: Залить код на GitHub
+```bash
+git init
+git add .
+git commit -m "Initial commit for Render deployment"
+git remote add origin https://github.com/YOUR_USERNAME/ozon-review-service.git
+git push -u origin main
+```
+
+### Шаг 2: Создать Web Service на Render
+
+1. Перейти на https://dashboard.render.com
+2. Нажать "New Web Service"
+3. Выбрать GitHub репозиторий
+4. Заполнить параметры:
+   - **Name:** ozon-review-service (или любое имя)
+   - **Environment:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - **Plan:** Free или Starter ($7/месяц)
+
+### Шаг 3: Добавить переменные окружения
+
+В разделе "Environment" добавить переменные:
+```
+DATABASE_URL=sqlite:///./ozon_reviews.db
+OZON_CLIENT_ID=your_client_id
+OZON_API_KEY=your_api_key
+OPENAI_API_KEY=sk-...
+RESPONSE_TONE=friendly
+RESPONSE_SIGNATURE=Ваша подпись
+DEBUG=False
+HOST=0.0.0.0
+PORT=10000
+```
+
+### Шаг 4: Деплой
+
+Нажать "Create Web Service" - Render автоматически обновит код при push на GitHub.
+
+## 3. Особенности на Render
+
+**Плюсы:**
+- Бесплатный tier с лимитом
+- Автоматическое обновление при git push
+- Встроенная поддержка Docker
+- HTTPS по умолчанию
+
+**Минусы:**
+- Free план засыпает при неиспользовании (нужна переподписка)
+- Ограниченные ресурсы
+- SQLite может быть медленной на бесплатном плане
+
+## 4. Для продакшена (PostgreSQL)
+
+Если хотите более надёжное решение:
+
+1. Создать PostgreSQL на Render
+2. Скопировать DATABASE_URL
+3. Добавить в Environment
+4. Приложение автоматически подключится
+
+Это потребует платный план (~$15/месяц).
+
+## 5. Мониторинг
+
+- Logs: Dashboard → Service → Logs
+- Healthcheck: Render автоматически проверяет /
+- Auto-restart: Если процесс упадёт, автоматически перезагружается
+
+## 6. Обновления
+
+Просто сделайте git push - Render автоматически пересоберёт и перезагрузит приложение.
+
+```bash
+git add .
+git commit -m "Update features"
+git push origin main
+```
+
+## Консультация
+
+Если возникли проблемы:
+- Проверьте logs на Render dashboard
+- Убедитесь что все переменные окружения заполнены
+- Проверьте что Procfile правильный
