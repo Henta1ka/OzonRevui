@@ -1,5 +1,6 @@
 """Application configuration"""
 from pydantic_settings import BaseSettings
+import os
 
 
 class Settings(BaseSettings):
@@ -28,6 +29,10 @@ class Settings(BaseSettings):
     # Auto-response settings
     auto_response_enabled: bool = False  # Auto-generate draft on new reviews
     
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
     # Server settings
     debug: bool = False
     host: str = "0.0.0.0"

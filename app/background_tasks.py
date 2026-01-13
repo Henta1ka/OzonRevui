@@ -30,24 +30,41 @@ class ReviewPoller:
         try:
             service = ReviewService(db)
             
-            # Fetch reviews from Ozon
-            result = await self.ozon_service.get_reviews(limit=100, offset=0)
+            # Fetch reviews with pagination (Ozon API limit is 100 per request)
+            offset = 0
+            limit = 100
+            total_processed = 0
             
-            if not result:
-                logger.warning("Failed to fetch reviews from Ozon")
-                return
-            
-            # Process each review (Ozon sometimes nests the list under result.reviews)
-            reviews = result.get("reviews", [])
-            if not reviews and isinstance(result, dict):
-                nested = result.get("result")
-                if isinstance(nested, dict):
-                    reviews = nested.get("reviews", [])
-            
-            logger.info(f"Processing {len(reviews)} new reviews")
-            
-            for review_data in reviews:
-                await service.process_new_review(review_data)
+            while True:
+                result = await self.ozon_service.get_reviews(limit=limit, offset=offset)
+                
+                if not result:
+                    logger.warning(f"Failed to fetch reviews from Ozon at offset {offset}")
+                    break
+                
+                # Process each review (Ozon sometimes nests the list under result.reviews)
+                reviews = result.get("reviews", [])
+                if not reviews and isinstance(result, dict):
+                    nested = result.get("result")
+                    if isinstance(nested, dict):
+                        reviews = nested.get("reviews", [])
+                
+                if not reviews:
+                    logger.info(f"No more reviews to fetch. Total processed: {total_processed}")
+                    break
+                
+                logger.info(f"Processing {len(reviews)} reviews at offset {offset}")
+                
+                for review_data in reviews:
+                    await service.process_new_review(review_data)
+                
+                total_processed += len(reviews)
+                offset += limit
+                
+                # Stop if we got less than requested (means we reached the end)
+                if len(reviews) < limit:
+                    logger.info(f"Reached end of reviews. Total processed: {total_processed}")
+                    break
             
             logger.info(f"Successfully processed {len(reviews)} reviews")
             
