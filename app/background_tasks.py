@@ -19,7 +19,7 @@ class ReviewPoller:
         self.scheduler = AsyncIOScheduler()
     
     async def poll_reviews(self):
-        """Fetch and process new reviews from Ozon"""
+        """Fetch and process new reviews from Ozon (last 30 days)"""
         logger.info("Starting review polling...")
         
         if not self.ozon_service.validate_credentials():
@@ -31,15 +31,18 @@ class ReviewPoller:
         try:
             service = ReviewService(db)
             
-            # Fetch reviews with pagination (Ozon API limit is 100 per request)
-            offset = 0
+            # Fetch reviews from last 30 days (Ozon API doesn't support large offsets well)
+            # We'll make multiple requests with the same 30-day window to get all available reviews
             limit = 100
+            offset = 0
+            max_iterations = 5  # Limit to 500 reviews per polling cycle to avoid timeout
             
-            while True:
-                result = await self.ozon_service.get_reviews(limit=limit, offset=offset)
+            for iteration in range(max_iterations):
+                logger.info(f"Fetching batch {iteration + 1}/{max_iterations}, offset {offset}...")
+                result = await self.ozon_service.get_reviews(limit=limit, offset=offset, days_back=30)
                 
                 if not result:
-                    logger.warning(f"Failed to fetch reviews from Ozon at offset {offset}")
+                    logger.warning(f"Failed to fetch reviews at offset {offset}")
                     break
                 
                 # Process each review (Ozon sometimes nests the list under result.reviews)
@@ -50,7 +53,7 @@ class ReviewPoller:
                         reviews = nested.get("reviews", [])
                 
                 if not reviews:
-                    logger.info(f"No more reviews to fetch. Total processed: {total_processed}")
+                    logger.info(f"No more reviews at offset {offset}. Total processed: {total_processed}")
                     break
                 
                 logger.info(f"Processing {len(reviews)} reviews at offset {offset}")
@@ -61,9 +64,9 @@ class ReviewPoller:
                 total_processed += len(reviews)
                 offset += limit
                 
-                # Stop if we got less than requested (means we reached the end)
+                # Stop if we got less than requested
                 if len(reviews) < limit:
-                    logger.info(f"Reached end of reviews. Total processed: {total_processed}")
+                    logger.info(f"Reached end of reviews (got {len(reviews)} < {limit}). Total processed: {total_processed}")
                     break
             
             logger.info(f"Successfully processed {total_processed} reviews")

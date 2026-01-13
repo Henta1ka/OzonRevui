@@ -30,13 +30,14 @@ class OzonService:
         }
         logger.info(f"OzonService initialized with Client-Id: {self.client_id}")
     
-    async def get_reviews(self, limit: int = 100, offset: int = 0) -> Optional[Dict[str, Any]]:
+    async def get_reviews(self, limit: int = 100, offset: int = 0, days_back: int = 30) -> Optional[Dict[str, Any]]:
         """
         Fetch reviews from Ozon API
         
         Args:
             limit: Maximum number of reviews to fetch (20-100)
-            offset: Number of reviews to skip
+            offset: Number of reviews to skip (deprecated, use days_back)
+            days_back: Number of days back to fetch reviews (default 30, set to 0 for all)
             
         Returns:
             List of reviews or None if error
@@ -51,12 +52,20 @@ class OzonService:
                 f"{self.BASE_URL}/v2/review/list",  # v2 alternative
             ]
             
+            # Build filter with date range for fresher reviews
+            filter_config = {"statuses": [1]}
+            
+            # If days_back is specified, add date filter
+            if days_back > 0:
+                from datetime import datetime, timedelta
+                date_from = (datetime.utcnow() - timedelta(days=days_back)).isoformat() + "Z"
+                filter_config["date_from"] = date_from
+                logger.info(f"Filtering reviews from last {days_back} days (since {date_from})")
+            
             payload = {
                 "limit": limit,
                 "offset": offset,
-                "filter": {
-                    "statuses": [1]
-                }
+                "filter": filter_config
             }
             
             async with httpx.AsyncClient(timeout=30) as client:

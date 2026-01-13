@@ -107,7 +107,7 @@ def get_products_summary(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.post("/sync")
 async def sync_reviews(db: Session = Depends(get_db)):
-    """Fetch ALL reviews from Ozon with pagination and store them locally."""
+    """Fetch fresh reviews from Ozon (last 30 days) and store them locally."""
     ozon_service = OzonService()
     if not ozon_service.validate_credentials():
         raise HTTPException(status_code=400, detail="Ozon API credentials are not configured")
@@ -119,10 +119,11 @@ async def sync_reviews(db: Session = Depends(get_db)):
         limit = 100
         total_fetched = 0
         total_saved = 0
+        max_iterations = 10  # Max 1000 reviews per sync call
         
-        while True:
-            logger.info(f"Fetching reviews at offset {offset}...")
-            result = await ozon_service.get_reviews(limit=limit, offset=offset)
+        for iteration in range(max_iterations):
+            logger.info(f"Sync batch {iteration + 1}/{max_iterations}, offset {offset}...")
+            result = await ozon_service.get_reviews(limit=limit, offset=offset, days_back=30)
             
             if not result:
                 logger.warning(f"Failed to fetch reviews at offset {offset}")
@@ -158,7 +159,7 @@ async def sync_reviews(db: Session = Depends(get_db)):
         return {
             "fetched": total_fetched,
             "saved": total_saved,
-            "message": f"Successfully synced {total_saved} reviews from {total_fetched} fetched"
+            "message": f"Successfully synced {total_saved} fresh reviews from last 30 days ({total_fetched} fetched)"
         }
     except Exception as exc:
         logger.error("Failed to sync reviews from Ozon", exc_info=True)
