@@ -13,7 +13,14 @@ class OzonService:
     BASE_URL = "https://api-seller.ozon.ru"
     
     def __init__(self, client_id: Optional[str] = None, api_key: Optional[str] = None):
-        self.client_id = str(client_id or settings.ozon_client_id).strip()
+        # Ozon requires Client-Id to be a numeric string
+        client_id_value = client_id or settings.ozon_client_id
+        try:
+            # Ensure Client-Id is numeric (Ozon API requirement)
+            self.client_id = str(int(str(client_id_value).strip()))
+        except (ValueError, TypeError):
+            self.client_id = str(client_id_value).strip()
+        
         self.api_key = str(api_key or settings.ozon_api_key).strip()
         self.headers = {
             "Client-Id": self.client_id,

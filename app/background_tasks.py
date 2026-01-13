@@ -27,13 +27,13 @@ class ReviewPoller:
             return
         
         db = SessionLocal()
+        total_processed = 0
         try:
             service = ReviewService(db)
             
             # Fetch reviews with pagination (Ozon API limit is 100 per request)
             offset = 0
             limit = 100
-            total_processed = 0
             
             while True:
                 result = await self.ozon_service.get_reviews(limit=limit, offset=offset)
@@ -66,7 +66,7 @@ class ReviewPoller:
                     logger.info(f"Reached end of reviews. Total processed: {total_processed}")
                     break
             
-            logger.info(f"Successfully processed {len(reviews)} reviews")
+            logger.info(f"Successfully processed {total_processed} reviews")
             
         except Exception as e:
             logger.error(f"Error during review polling: {e}", exc_info=True)
