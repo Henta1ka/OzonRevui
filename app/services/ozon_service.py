@@ -120,29 +120,28 @@ class OzonService:
     
     async def send_response(self, review_id: str, text: str) -> Optional[Dict[str, Any]]:
         """
-        Send response (comment) to a review
+        Send response (feedback post) to a review
         
         Args:
-            review_id: Ozon review ID
+            review_id: Ozon review/feedback ID
             text: Response text
             
         Returns:
             Dict with ok flag, data or error info
         """
         try:
-            # Try different endpoints for sending responses
+            # Ozon API uses feedback terminology - correct endpoints
             endpoints = [
-                f"{self.BASE_URL}/v2/review/comment/create",
-                f"{self.BASE_URL}/v1/review/comment",
-                f"{self.BASE_URL}/v1/review/{review_id}/comment",
+                f"{self.BASE_URL}/v3/feedback/post",  # Current/preferred
+                f"{self.BASE_URL}/v1/feedback/post",  # Legacy alternative
             ]
             
             payload = {
-                "review_id": review_id,
+                "feedback_id": review_id,  # Ozon expects feedback_id
                 "text": text
             }
             
-            logger.info(f"Sending response to review {review_id}, text length: {len(text)}")
+            logger.info(f"Sending response to feedback {review_id}, text length: {len(text)}")
             logger.info(f"Payload: {payload}")
             
             async with httpx.AsyncClient(timeout=30) as client:
