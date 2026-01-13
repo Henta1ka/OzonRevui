@@ -111,7 +111,7 @@ class OzonService:
             text: Response text
             
         Returns:
-            Response from Ozon API or None if error
+            Dict with ok flag, data or error info
         """
         try:
             url = f"{self.BASE_URL}/v2/review/comment/create"
@@ -129,17 +129,29 @@ class OzonService:
                     json=payload
                 )
                 
+                body_preview = response.text[:500]
                 logger.info(f"Response status: {response.status_code}")
+                logger.info(f"Response body: {body_preview}")
                 
                 if response.status_code == 200:
                     logger.info("✅ Response sent successfully")
-                    return response.json()
+                    return {
+                        "ok": True,
+                        "data": response.json()
+                    }
                 else:
-                    logger.warning(f"Status {response.status_code}: {response.text[:200]}")
-                    return None
+                    logger.warning(f"Status {response.status_code}: {body_preview}")
+                    return {
+                        "ok": False,
+                        "status_code": response.status_code,
+                        "text": body_preview
+                    }
         except Exception as e:
             logger.error(f"Error sending response to Ozon: {e}", exc_info=True)
-            return None
+            return {
+                "ok": False,
+                "error": str(e)
+            }
     
     def validate_credentials(self) -> bool:
         """Validate that API credentials are set"""

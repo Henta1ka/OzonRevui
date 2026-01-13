@@ -59,7 +59,10 @@ class ReviewService:
             is_responded = status_raw in {"processed", "answered", "commented", "response"}
             answered_flag = has_comments or is_responded
             
-            logger.info(f"Review {review_data.get('id')}: has_comments={has_comments}, is_responded={is_responded}, answered={answered_flag}")
+            logger.info(
+                f"Review {review_data.get('id')}: "
+                f"has_comments={has_comments}, is_responded={is_responded}, answered={answered_flag}"
+            )
             
             # Create review record
             review = Review(
@@ -180,21 +183,39 @@ class ReviewService:
                 review.ozon_review_id,
                 response_text
             )
-            
+
+            success = bool(result and result.get("ok"))
+            error_text = None
+            ozon_payload = None
+
+            if result:
+                error_text = result.get("text") or result.get("error")
+                # Some responses may wrap data under "data" -> "result"
+                ozon_payload = result.get("data") or {}
+
             # Create response record
             response = Response(
                 review_id=review_id,
                 draft_id=draft_id,
                 text=response_text,
-                status="sent" if result else "failed",
-                error_message=None if result else "Failed to send to Ozon"
+                status="sent" if success else "failed",
+                error_message=None if success else (error_text or "Failed to send to Ozon")
             )
-            
-            if result and "id" in result:
-                response.ozon_response_id = result["id"]
+
+            if ozon_payload and isinstance(ozon_payload, dict):
+                if "id" in ozon_payload:
+                    response.ozon_response_id = ozon_payload["id"]
+                # If nested result holds id
+                if "result" in ozon_payload and isinstance(ozon_payload["result"], dict):
+                    inner = ozon_payload["result"]
+                    if isinstance(inner, dict) and "id" in inner:
+                        response.ozon_response_id = inner["id"]
             
             self.db.add(response)
-            review.answered = True
+
+            # Only mark answered on successful send
+            if success:
+                review.answered = True
             self.db.commit()
             self.db.refresh(response)
             
