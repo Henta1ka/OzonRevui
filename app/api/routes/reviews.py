@@ -107,7 +107,7 @@ def get_products_summary(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.post("/sync")
 async def sync_reviews(db: Session = Depends(get_db)):
-    """Fetch latest reviews from Ozon and store them locally."""
+    """Fetch ALL reviews from Ozon with pagination and store them locally."""
     ozon_service = OzonService()
     if not ozon_service.validate_credentials():
         raise HTTPException(status_code=400, detail="Ozon API credentials are not configured")
@@ -115,30 +115,54 @@ async def sync_reviews(db: Session = Depends(get_db)):
     service = ReviewService(db)
 
     try:
-        result = await ozon_service.get_reviews(limit=100, offset=0)
+        offset = 0
+        limit = 100
+        total_fetched = 0
+        total_saved = 0
+        
+        while True:
+            logger.info(f"Fetching reviews at offset {offset}...")
+            result = await ozon_service.get_reviews(limit=limit, offset=offset)
+            
+            if not result:
+                logger.warning(f"Failed to fetch reviews at offset {offset}")
+                break
+            
+            # Extract reviews (handle both direct and nested structures)
+            reviews = result.get("reviews", [])
+            if not reviews and isinstance(result, dict):
+                nested = result.get("result")
+                if isinstance(nested, dict):
+                    reviews = nested.get("reviews", [])
+            
+            if not reviews:
+                logger.info(f"No more reviews at offset {offset}")
+                break
+            
+            logger.info(f"Processing {len(reviews)} reviews at offset {offset}")
+            
+            for review_data in reviews:
+                saved = await service.process_new_review(review_data)
+                if saved:
+                    total_saved += 1
+            
+            total_fetched += len(reviews)
+            offset += limit
+            
+            # Stop if we got less than requested
+            if len(reviews) < limit:
+                logger.info(f"Reached end of reviews at offset {offset}")
+                break
+        
+        logger.info(f"Sync complete: fetched {total_fetched}, saved {total_saved}")
+        return {
+            "fetched": total_fetched,
+            "saved": total_saved,
+            "message": f"Successfully synced {total_saved} reviews from {total_fetched} fetched"
+        }
     except Exception as exc:
-        logger.error("Failed to fetch reviews from Ozon", exc_info=True)
+        logger.error("Failed to sync reviews from Ozon", exc_info=True)
         raise HTTPException(status_code=502, detail=f"Ozon API error: {exc}")
-
-    if not result:
-        raise HTTPException(status_code=502, detail="Empty response from Ozon API")
-
-    reviews = result.get("reviews", [])
-    if not reviews and isinstance(result, dict):
-        nested = result.get("result")
-        if isinstance(nested, dict):
-            reviews = nested.get("reviews", [])
-
-    processed = 0
-    for review_data in reviews:
-        saved = await service.process_new_review(review_data)
-        if saved:
-            processed += 1
-
-    return {
-        "fetched": len(reviews),
-        "saved": processed
-    }
 
 
 @router.get("/{review_id}", response_model=ReviewDetail)
