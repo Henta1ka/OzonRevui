@@ -44,9 +44,22 @@ class ReviewService:
             category = await self.ai_service.categorize_review(review_text)
 
             # Detect already answered on marketplace to avoid double replies
+            # Ozon API response statuses:
+            # - "new" / "default" = no response yet
+            # - "processed" / "answered" / "commented" / "response" = seller has responded
             status_raw = (review_data.get("status") or "").lower()
-            comments_amount = review_data.get("comments_amount") or review_data.get("answers_amount") or review_data.get("comments") or 0
-            answered_flag = bool(comments_amount and comments_amount > 0 or status_raw in {"processed", "answered", "commented"})
+            comments_amount = review_data.get("comments_amount") or 0
+            
+            # Debug: log what we received
+            logger.debug(f"Review check - ID: {review_data.get('id')}, comments_amount: {comments_amount}, status: {status_raw}")
+            
+            # If status is "commented" or "processed" = seller has responded
+            # If comments_amount > 0 = seller has a response
+            has_comments = int(comments_amount) > 0 if comments_amount else False
+            is_responded = status_raw in {"processed", "answered", "commented", "response"}
+            answered_flag = has_comments or is_responded
+            
+            logger.info(f"Review {review_data.get('id')}: has_comments={has_comments}, is_responded={is_responded}, answered={answered_flag}")
             
             # Create review record
             review = Review(
