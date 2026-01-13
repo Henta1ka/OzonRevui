@@ -130,40 +130,68 @@ class OzonService:
             Dict with ok flag, data or error info
         """
         try:
-            url = f"{self.BASE_URL}/v2/review/comment/create"
+            # Try different endpoints for sending responses
+            endpoints = [
+                f"{self.BASE_URL}/v2/review/comment/create",
+                f"{self.BASE_URL}/v1/review/comment",
+                f"{self.BASE_URL}/v1/review/{review_id}/comment",
+            ]
+            
             payload = {
                 "review_id": review_id,
                 "text": text
             }
             
-            logger.info(f"Sending response to review {review_id}")
+            logger.info(f"Sending response to review {review_id}, text length: {len(text)}")
+            logger.info(f"Payload: {payload}")
             
             async with httpx.AsyncClient(timeout=30) as client:
-                response = await client.post(
-                    url,
-                    headers=self.headers,
-                    json=payload
-                )
+                for url in endpoints:
+                    logger.info(f"Trying endpoint: {url}")
+                    try:
+                        response = await client.post(
+                            url,
+                            headers=self.headers,
+                            json=payload
+                        )
+                        
+                        body_preview = response.text[:500]
+                        logger.info(f"Response status: {response.status_code}")
+                        logger.info(f"Response body: {body_preview}")
+                        
+                        if response.status_code == 200:
+                            logger.info(f"✅ Response sent successfully via {url}")
+                            return {
+                                "ok": True,
+                                "data": response.json()
+                            }
+                        elif response.status_code == 404:
+                            logger.info(f"404 - {url} not found, trying next...")
+                            continue
+                        else:
+                            logger.warning(f"Status {response.status_code} from {url}: {body_preview}")
+                            # If client error and not 404, don't try other endpoints
+                            if response.status_code < 500 and response.status_code != 404:
+                                return {
+                                    "ok": False,
+                                    "status_code": response.status_code,
+                                    "text": body_preview
+                                }
+                    except Exception as e:
+                        logger.warning(f"Failed with {url}: {e}")
+                        continue
                 
-                body_preview = response.text[:500]
-                logger.info(f"Response status: {response.status_code}")
-                logger.info(f"Response body: {body_preview}")
-                
-                if response.status_code == 200:
-                    logger.info("✅ Response sent successfully")
-                    return {
-                        "ok": True,
-                        "data": response.json()
-                    }
-                else:
-                    logger.warning(f"Status {response.status_code}: {body_preview}")
-                    return {
-                        "ok": False,
-                        "status_code": response.status_code,
-                        "text": body_preview
-                    }
+                logger.error("All send_response endpoints failed")
+                return {
+                    "ok": False,
+                    "error": "All endpoints returned 404 or failed"
+                }
         except Exception as e:
             logger.error(f"Error sending response to Ozon: {e}", exc_info=True)
+            return {
+                "ok": False,
+                "error": str(e)
+            }
             return {
                 "ok": False,
                 "error": str(e)
