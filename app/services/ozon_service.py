@@ -120,71 +120,55 @@ class OzonService:
     
     async def send_response(self, review_id: str, text: str) -> Optional[Dict[str, Any]]:
         """
-        Send response (feedback post) to a review
+        Send response (comment) to a review
         
         Args:
-            review_id: Ozon review/feedback ID
+            review_id: Ozon review ID
             text: Response text
             
         Returns:
             Dict with ok flag, data or error info
         """
         try:
-            # Ozon API uses feedback terminology - correct endpoints
-            endpoints = [
-                f"{self.BASE_URL}/v3/feedback/post",  # Current/preferred
-                f"{self.BASE_URL}/v1/feedback/post",  # Legacy alternative
-            ]
+            # Correct Ozon endpoint for review comments
+            url = f"{self.BASE_URL}/v1/review/comment/create"
             
             payload = {
-                "feedback_id": review_id,  # Ozon expects feedback_id
-                "text": text
+                "review_id": review_id,
+                "text": text,
+                "mark_review_as_processed": True  # Mark review as processed
             }
             
-            logger.info(f"Sending response to feedback {review_id}, text length: {len(text)}")
+            logger.info(f"Sending response to review {review_id}, text length: {len(text)}")
+            logger.info(f"Endpoint: {url}")
             logger.info(f"Payload: {payload}")
             
             async with httpx.AsyncClient(timeout=30) as client:
-                for url in endpoints:
-                    logger.info(f"Trying endpoint: {url}")
-                    try:
-                        response = await client.post(
-                            url,
-                            headers=self.headers,
-                            json=payload
-                        )
-                        
-                        body_preview = response.text[:500]
-                        logger.info(f"Response status: {response.status_code}")
-                        logger.info(f"Response body: {body_preview}")
-                        
-                        if response.status_code == 200:
-                            logger.info(f"✅ Response sent successfully via {url}")
-                            return {
-                                "ok": True,
-                                "data": response.json()
-                            }
-                        elif response.status_code == 404:
-                            logger.info(f"404 - {url} not found, trying next...")
-                            continue
-                        else:
-                            logger.warning(f"Status {response.status_code} from {url}: {body_preview}")
-                            # If client error and not 404, don't try other endpoints
-                            if response.status_code < 500 and response.status_code != 404:
-                                return {
-                                    "ok": False,
-                                    "status_code": response.status_code,
-                                    "text": body_preview
-                                }
-                    except Exception as e:
-                        logger.warning(f"Failed with {url}: {e}")
-                        continue
+                logger.info(f"Trying endpoint: {url}")
+                response = await client.post(
+                    url,
+                    headers=self.headers,
+                    json=payload
+                )
                 
-                logger.error("All send_response endpoints failed")
-                return {
-                    "ok": False,
-                    "error": "All endpoints returned 404 or failed"
-                }
+                body_preview = response.text[:500]
+                logger.info(f"Response status: {response.status_code}")
+                logger.info(f"Response body: {body_preview}")
+                
+                if response.status_code == 200:
+                    logger.info(f"✅ Response sent successfully!")
+                    return {
+                        "ok": True,
+                        "data": response.json()
+                    }
+                else:
+                    logger.warning(f"Status {response.status_code}: {body_preview}")
+                    return {
+                        "ok": False,
+                        "status_code": response.status_code,
+                        "text": body_preview
+                    }
+                    
         except Exception as e:
             logger.error(f"Error sending response to Ozon: {e}", exc_info=True)
             return {
