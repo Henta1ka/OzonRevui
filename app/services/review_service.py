@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.review import Review
 from app.models.response import Response, ResponseDraft
 from app.services.ai_service import AIService
+from app.services.yandex_service import YandexGPTService
 from app.services.ozon_service import OzonService
 from app.services.auto_response_service import AutoResponseService
 from app.config import settings
@@ -18,7 +19,15 @@ class ReviewService:
     def __init__(self, db: Session):
         self.db = db
         self.ai_service = AIService()
+        self.yandex_service = YandexGPTService()
         self.ozon_service = OzonService()
+    
+    def _get_ai_service(self):
+        """Get the currently configured AI service"""
+        provider = getattr(settings, 'ai_provider', 'openai').lower()
+        if provider == 'yandex':
+            return self.yandex_service
+        return self.ai_service
     
     async def process_new_review(self, review_data: dict) -> Optional[Review]:
         """
@@ -38,10 +47,11 @@ class ReviewService:
             if existing:
                 return existing
             
-            # Analyze sentiment and category
+            # Analyze sentiment and category using configured AI provider
             review_text = review_data.get("text") or review_data.get("comment") or review_data.get("content") or ""
-            sentiment = await self.ai_service.analyze_sentiment(review_text)
-            category = await self.ai_service.categorize_review(review_text)
+            ai_service = self._get_ai_service()
+            sentiment = await ai_service.analyze_sentiment(review_text)
+            category = await ai_service.categorize_review(review_text)
 
             # Detect already answered on marketplace to avoid double replies
             # Ozon API response statuses:
@@ -122,7 +132,8 @@ class ReviewService:
     ) -> List[ResponseDraft]:
         """Generate response draft variants for a review"""
         try:
-            drafts_text = await self.ai_service.generate_response_drafts(
+            ai_service = self._get_ai_service()
+            drafts_text = await ai_service.generate_response_drafts(
                 review_text,
                 num_variants=num_variants
             )

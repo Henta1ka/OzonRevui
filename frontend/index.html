@@ -1035,6 +1035,13 @@
                     } else if (type === 'openai') {
                         const provider = document.querySelector('#provider-openai.active') ? 'openai' : 'yandex';
                         
+                        // Send provider choice to backend
+                        await fetch(`${API_BASE}/settings/ai-provider`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ provider: provider })
+                        });
+                        
                         if (provider === 'openai') {
                             const apiKey = document.getElementById('openai-api-key').value;
                             const model = document.getElementById('openai-model')?.value || 'gpt-3.5-turbo';
@@ -1055,7 +1062,7 @@
                                 body: JSON.stringify({ api_key: apiKey, model: model })
                             });
                             
-                            showMessage(msgElement, '✅ Настройки OpenAI сохранены (сервер + браузер)', 'success');
+                            showMessage(msgElement, '✅ Используется OpenAI для генерации ответов', 'success');
                         } else {
                             const apiKey = document.getElementById('yandex-api-key').value;
                             const folderId = document.getElementById('yandex-folder-id').value;
@@ -1078,7 +1085,7 @@
                                 body: JSON.stringify({ api_key: apiKey, folder_id: folderId, model: model })
                             });
                             
-                            showMessage(msgElement, '✅ Настройки YandexGPT сохранены (сервер + браузер)', 'success');
+                            showMessage(msgElement, '✅ Используется YandexGPT для генерации ответов', 'success');
                         }
                         
                         checkStatus();
