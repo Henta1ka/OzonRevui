@@ -2,15 +2,19 @@
 import logging
 import asyncio
 from app.config import settings
+from app.services.ai_service import AIService
+from app.services.yandex_service import YandexGPTService
 
 logger = logging.getLogger(__name__)
 
 
 class AutoResponseService:
-    """Service for generating automatic responses to reviews"""
+    """Service for generating automatic responses to reviews using selected AI provider"""
     
     def __init__(self):
-        pass
+        # Initialize both AI services
+        self.openai_service = AIService()
+        self.yandex_service = YandexGPTService()
     
     async def generate_response(
         self, 
@@ -20,7 +24,7 @@ class AutoResponseService:
         signature: str = None
     ) -> dict:
         """
-        Generate an automatic response to a review
+        Generate an automatic response to a review using configured AI provider
         
         Args:
             review_text: The review text to respond to
@@ -30,24 +34,84 @@ class AutoResponseService:
             
         Returns:
             {
+                "response": str,
+                "response_text": str,
                 "text": str,
                 "is_generated": bool,
                 "mode": "ai" | "fallback",
+                "provider": "openai" | "yandex",
                 "error": str or null
             }
         """
         
         # Use defaults from config if not provided
         tone = tone or getattr(settings, 'response_tone', 'friendly')
-        prompt_template = prompt_template or getattr(settings, 'response_prompt', self._get_default_prompt(tone))
         signature = signature or getattr(settings, 'response_signature', '')
+        provider = getattr(settings, 'ai_provider', 'openai').lower()
         
-        # Build the full prompt
-        full_prompt = self._build_prompt(review_text, tone, prompt_template)
+        logger.info(f"Generating response using {provider} for review: {review_text[:50]}...")
         
-        logger.info(f"Generating response for review: {review_text[:50]}...")
-        
-        # Try to generate via OpenAI
+        try:
+            # Select provider and generate draft
+            if provider == 'yandex':
+                drafts = await self.yandex_service.generate_response_drafts(
+                    review_text,
+                    num_variants=1,
+                    tone=tone,
+                    signature=signature,
+                    custom_prompt=prompt_template
+                )
+                if drafts:
+                    response_text = drafts[0]
+                    return {
+                        "response": response_text,
+                        "response_text": response_text,
+                        "text": response_text,
+                        "is_generated": True,
+                        "mode": "ai",
+                        "provider": "yandex",
+                        "error": None
+                    }
+            else:  # openai (default)
+                drafts = await self.openai_service.generate_response_drafts(
+                    review_text,
+                    num_variants=1
+                )
+                if drafts:
+                    response_text = drafts[0]
+                    return {
+                        "response": response_text,
+                        "response_text": response_text,
+                        "text": response_text,
+                        "is_generated": True,
+                        "mode": "ai",
+                        "provider": "openai",
+                        "error": None
+                    }
+            
+            # Fallback if both providers fail
+            logger.warning(f"AI generation failed, using fallback for {provider}")
+            fallback = f"Спасибо за ваш отзыв! {signature}".strip()
+            return {
+                "response": fallback,
+                "response_text": fallback,
+                "text": fallback,
+                "is_generated": False,
+                "mode": "fallback",
+                "provider": provider,
+                "error": "AI generation failed"
+            }
+        except Exception as e:
+            logger.error(f"Error generating response: {e}", exc_info=True)
+            fallback = f"Спасибо за ваш отзыв! {signature}".strip()
+            return {
+                "response": fallback,
+                "response_text": fallback,
+                "text": fallback,
+                "is_generated": False,
+                "mode": "fallback",
+                "provider": provider,
+                "error": str(e)
         api_key = getattr(settings, 'openai_api_key', '')
         if api_key and not api_key.startswith('sk-demo-'):
             try:

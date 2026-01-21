@@ -465,3 +465,57 @@ async def test_auto_response(payload: TestAutoResponseRequest):
     )
     
     return result
+
+
+@router.get("/yandex/credentials")
+def get_yandex_credentials():
+    """Get stored YandexGPT credentials status (never returns actual keys)"""
+    has_key = bool(settings.yandex_api_key and settings.yandex_api_key not in ["", "your_", "AQVNXXX"])
+    has_folder = bool(settings.yandex_folder_id and settings.yandex_folder_id not in ["", "your_", "b1gXXX"])
+    
+    return {
+        "configured": has_key and has_folder,
+        "has_api_key": has_key,
+        "has_folder_id": has_folder,
+        "model": settings.yandex_model
+    }
+
+
+@router.post("/yandex/credentials")
+def save_yandex_credentials(payload: dict):
+    """Save YandexGPT credentials"""
+    api_key = payload.get("api_key", "").strip()
+    folder_id = payload.get("folder_id", "").strip()
+    model = payload.get("model", settings.yandex_model).strip()
+    
+    if not api_key or not folder_id:
+        raise HTTPException(status_code=400, detail="API Key and Folder ID are required")
+    
+    settings.yandex_api_key = api_key
+    settings.yandex_folder_id = folder_id
+    settings.yandex_model = model
+    
+    # Also set as active provider
+    settings.ai_provider = "yandex"
+    
+    logger.info("YandexGPT credentials updated via API")
+    return {"status": "success", "message": "YandexGPT credentials saved"}
+
+
+@router.post("/ai-provider")
+def set_ai_provider(payload: dict):
+    """Switch between AI providers (openai or yandex)"""
+    provider = payload.get("provider", "openai").strip().lower()
+    
+    if provider not in ["openai", "yandex"]:
+        raise HTTPException(status_code=400, detail="Provider must be 'openai' or 'yandex'")
+    
+    settings.ai_provider = provider
+    logger.info(f"AI provider changed to: {provider}")
+    
+    return {
+        "status": "success",
+        "provider": provider,
+        "message": f"Using {provider} for AI generation"
+    }
+

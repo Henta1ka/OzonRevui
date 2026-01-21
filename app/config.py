@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-3.5-turbo"  # gpt-3.5-turbo, gpt-4, gpt-4-turbo
     
+    # YandexGPT API
+    yandex_api_key: str = ""
+    yandex_folder_id: str = ""
+    yandex_model: str = "yandexgpt-3"  # yandexgpt-3, yandexgpt-3-lite, yandexgpt-4
+    
+    # AI Provider selection
+    ai_provider: str = "openai"  # openai or yandex
+    
     # Response settings
     response_tone: str = "friendly"  # friendly, official, formal
     response_signature: str = "С уважением,\nКоманда маркетплейса"
