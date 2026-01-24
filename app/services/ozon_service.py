@@ -32,10 +32,10 @@ class OzonService:
     
     async def get_reviews(self, limit: int = 100, offset: int = 0, days_back: int = 30) -> Optional[Dict[str, Any]]:
         """
-        Fetch reviews from Ozon API
+        Fetch reviews from Ozon API - ONLY 100 LATEST FRESH REVIEWS
         
         Args:
-            limit: Maximum number of reviews to fetch (20-100)
+            limit: Always 100 (fixed to get only latest reviews)
             offset: Number of reviews to skip (deprecated, use days_back)
             days_back: Number of days back to fetch reviews (default 30, set to 0 for all)
             
@@ -43,8 +43,8 @@ class OzonService:
             List of reviews or None if error
         """
         try:
-            # Ozon API requires limit between 20 and 100
-            limit = max(20, min(limit, 100))
+            # ALWAYS fetch max 100 to get only the LATEST reviews
+            limit = 100
             
             # Try different endpoints for reviews
             endpoints = [

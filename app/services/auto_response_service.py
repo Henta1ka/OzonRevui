@@ -112,6 +112,8 @@ class AutoResponseService:
                 "mode": "fallback",
                 "provider": provider,
                 "error": str(e)
+            }
+        
         api_key = getattr(settings, 'openai_api_key', '')
         if api_key and not api_key.startswith('sk-demo-'):
             try:
