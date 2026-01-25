@@ -775,6 +775,21 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Add logs button to header
+            try {
+                const settingsBtn = document.querySelector('header .status-bar button');
+                if (settingsBtn) {
+                    const logsBtn = document.createElement('button');
+                    logsBtn.className = 'btn btn-secondary';
+                    logsBtn.style.marginLeft = '10px';
+                    logsBtn.innerHTML = '📋 Логи';
+                    logsBtn.onclick = () => getLogsSummary();
+                    settingsBtn.parentElement.appendChild(logsBtn);
+                }
+            } catch (e) {
+                console.error('Could not add logs button:', e);
+            }
+            
             checkStatus();
             loadSettings();
             // Avoid API 400 on first load if Ozon creds are missing; just render existing data
@@ -2092,6 +2107,138 @@
             if (newName && newName.trim()) {
                 localStorage.setItem(`product_name_${sku}`, newName.trim());
                 document.getElementById(`product-name-${sku}`).textContent = escapeHtml(newName.trim());
+            }
+        }
+
+        // Logs functions
+        async function downloadLogs() {
+            try {
+                const response = await fetch(`${API_BASE}/logs/download`);
+                if (!response.ok) {
+                    alert('❌ Ошибка при скачивании логов');
+                    return;
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `logs-${new Date().toISOString().slice(0,10)}.log`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification('✅ Логи скачаны', 'success', 2000);
+            } catch (e) {
+                console.error('Error downloading logs:', e);
+                alert('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        async function viewLogs() {
+            try {
+                const response = await fetch(`${API_BASE}/logs/tail?lines=100`);
+                const data = await response.json();
+                
+                if (!data.logs || data.logs.length === 0) {
+                    alert('📭 Логов не найдено');
+                    return;
+                }
+                
+                // Create modal with logs
+                const modal = document.createElement('div');
+                modal.className = 'modal active';
+                modal.id = 'logs-modal';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 900px;">
+                        <div class="modal-header">
+                            <h2>📋 Логи приложения (последние 100 строк)</h2>
+                            <button class="close-btn" onclick="document.getElementById('logs-modal').remove()">&times;</button>
+                        </div>
+                        <div style="background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 500px; overflow-y: auto; line-height: 1.4; white-space: pre-wrap; word-break: break-word;">
+                            ${data.logs.map(line => escapeHtml(line)).join('')}
+                        </div>
+                        <div style="margin-top: 15px; text-align: center;">
+                            <button class="btn btn-primary" onclick="downloadLogs()">📥 Скачать полные логи</button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('logs-modal').remove()">Закрыть</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (e) {
+                console.error('Error viewing logs:', e);
+                alert('❌ Ошибка при загрузке логов: ' + e.message);
+            }
+        }
+
+        async function getLogsSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/logs/summary`);
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    alert('⚠️ ' + data.message);
+                    return;
+                }
+                
+                // Create modal with summary
+                const modal = document.createElement('div');
+                modal.className = 'modal active';
+                modal.id = 'logs-summary-modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>📊 Резюме ошибок (последние 500 строк)</h2>
+                            <button class="close-btn" onclick="document.getElementById('logs-summary-modal').remove()">&times;</button>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                                <div style="background: #fadbd8; padding: 15px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 24px; color: #e74c3c; font-weight: bold;">${data.error_count}</div>
+                                    <div style="color: #c0392b; font-size: 13px;">Ошибок</div>
+                                </div>
+                                <div style="background: #fef5e7; padding: 15px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 24px; color: #f39c12; font-weight: bold;">${data.warning_count}</div>
+                                    <div style="color: #e67e22; font-size: 13px;">Предупреждений</div>
+                                </div>
+                                <div style="background: #d6eaf8; padding: 15px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 24px; color: #3498db; font-weight: bold;">${data.info_count}</div>
+                                    <div style="color: #2980b9; font-size: 13px;">Информации</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${data.recent_errors.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="margin-bottom: 10px;">❌ Последние ошибки:</h3>
+                                <div style="background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #e74c3c; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+                                    ${data.recent_errors.map(err => `<div style="margin-bottom: 8px; color: #c0392b;">${escapeHtml(err)}</div>`).join('')}
+                                </div>
+                            </div>
+                        ` : '<div style="color: #27ae60;">✅ Ошибок не найдено!</div>'}
+                        
+                        ${data.recent_warnings.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="margin-bottom: 10px;">⚠️ Последние предупреждения:</h3>
+                                <div style="background: #fef5e7; padding: 12px; border-radius: 4px; border-left: 4px solid #f39c12; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+                                    ${data.recent_warnings.map(warn => `<div style="margin-bottom: 8px; color: #e67e22;">${escapeHtml(warn)}</div>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="viewLogs()">📋 Показать все логи</button>
+                            <button class="btn btn-secondary" onclick="downloadLogs()">📥 Скачать логи</button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('logs-summary-modal').remove()">Закрыть</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (e) {
+                console.error('Error getting logs summary:', e);
+                alert('❌ Ошибка: ' + e.message);
             }
         }
     </script>

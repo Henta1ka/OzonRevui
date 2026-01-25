@@ -6,7 +6,7 @@ import logging
 import os
 from app.database import Base, engine
 from app.background_tasks import start_background_tasks, shutdown_background_tasks
-from app.api.routes import reviews, responses, settings, integrations
+from app.api.routes import reviews, responses, settings, integrations, logs
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +36,7 @@ app.include_router(reviews.router)
 app.include_router(responses.router)
 app.include_router(settings.router)
 app.include_router(integrations.router)
+app.include_router(logs.router)
 
 # Mount static files (frontend)
 frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
