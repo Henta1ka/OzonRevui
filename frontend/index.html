@@ -775,21 +775,6 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            // Add logs button to header
-            try {
-                const settingsBtn = document.querySelector('header .status-bar button');
-                if (settingsBtn) {
-                    const logsBtn = document.createElement('button');
-                    logsBtn.className = 'btn btn-secondary';
-                    logsBtn.style.marginLeft = '10px';
-                    logsBtn.innerHTML = '📋 Логи';
-                    logsBtn.onclick = () => getLogsSummary();
-                    settingsBtn.parentElement.appendChild(logsBtn);
-                }
-            } catch (e) {
-                console.error('Could not add logs button:', e);
-            }
-            
             checkStatus();
             loadSettings();
             // Avoid API 400 on first load if Ozon creds are missing; just render existing data
@@ -934,21 +919,35 @@
                 const result = await response.json();
                 
                 if (result.status === 'success' && result.is_valid) {
-                    msg.textContent = `✅ YandexGPT подключен успешно! Модель: ${result.model}`;
+                    msg.innerHTML = `✅ YandexGPT подключен успешно! Модель: <strong>${result.model}</strong>`;
                     msg.style.background = '#d5f4e6';
                     msg.style.color = '#27ae60';
                 } else {
-                    msg.textContent = `❌ ${result.message}`;
+                    // Показываем полную ошибку
+                    let errorText = result.message || 'Ошибка подключения';
                     if (result.details) {
-                        msg.textContent += ` (${result.details})`;
+                        errorText += `\n${result.details}`;
                     }
+                    if (result.error) {
+                        errorText += `\n\nОшибка: ${result.error}`;
+                    }
+                    if (result.status) {
+                        errorText += `\nСтатус: ${result.status}`;
+                    }
+                    
+                    msg.innerHTML = `❌ ${errorText.split('\n').join('<br>')}`;
                     msg.style.background = '#fadbd8';
                     msg.style.color = '#c0392b';
+                    msg.style.whiteSpace = 'pre-wrap';
+                    msg.style.wordBreak = 'break-word';
                 }
             } catch (e) {
-                msg.textContent = `❌ Ошибка подключения: ${e.message}`;
+                const errorMsg = `❌ Ошибка при проверке подключения:\n${e.message}\n\nТип: ${e.name}\nКод: ${e.code || 'N/A'}`;
+                msg.innerHTML = errorMsg.split('\n').join('<br>');
                 msg.style.background = '#fadbd8';
                 msg.style.color = '#c0392b';
+                msg.style.whiteSpace = 'pre-wrap';
+                msg.style.wordBreak = 'break-word';
             }
         }
         
@@ -1293,8 +1292,13 @@
                         html += `<div style="color: #27ae60; margin-top: 8px; padding: 8px; background: #d5f4e6; border-radius: 4px;">✅ Квота доступна</div>`;
                     }
                     
+                    // Show detailed error if present
                     if (health.error) {
-                        html += `<div style="color: #e74c3c; margin-top: 8px; font-size: 12px;">⚠️ ${health.error}</div>`;
+                        let errorText = health.error;
+                        if (health.error_details) {
+                            errorText += `\n${health.error_details}`;
+                        }
+                        html += `<div style="color: #e74c3c; margin-top: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-word; background: #fadbd8; padding: 8px; border-radius: 4px; border-left: 4px solid #e74c3c;">❌ ${escapeHtml(errorText)}</div>`;
                     }
                     
                     html += '</div>';
@@ -1306,7 +1310,8 @@
                     }
                     
                 } catch (error) {
-                    msgElement.innerHTML = `<div style="color: #e74c3c;">❌ Ошибка при проверке: ${error.message}</div>`;
+                    const errorDetails = `❌ Ошибка при проверке: ${error.message}\n\nТип: ${error.name}`;
+                    msgElement.innerHTML = `<div style="color: #e74c3c; white-space: pre-wrap; word-break: break-word;">${errorDetails}</div>`;
                 }
             })();
         }
@@ -1395,32 +1400,26 @@
                                 <div>Использовано токенов: <strong>${result.tokens_used}</strong></div>
                             </div>
                         `;
-                    } else if (result.status === 'auth_error') {
-                        html = `
-                            <div style="color: #e74c3c; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #e74c3c;">
-                                <div style="font-weight: bold; margin-bottom: 8px;">❌ ${result.message}</div>
-                                <div style="font-size: 13px; margin-top: 8px;">${result.details}</div>
-                            </div>
-                        `;
-                    } else if (result.status === 'quota_error') {
-                        html = `
-                            <div style="color: #e67e22; background: #fdebd0; padding: 12px; border-radius: 4px; border-left: 4px solid #e67e22;">
-                                <div style="font-weight: bold; margin-bottom: 8px;">⚠️ ${result.message}</div>
-                                <div style="font-size: 13px; margin-top: 8px;">${result.details}</div>
-                            </div>
-                        `;
-                    } else if (result.status === 'model_error') {
-                        html = `
-                            <div style="color: #f39c12; background: #fef5e7; padding: 12px; border-radius: 4px; border-left: 4px solid #f39c12;">
-                                <div style="font-weight: bold; margin-bottom: 8px;">⚠️ ${result.message}</div>
-                                <div style="font-size: 13px; margin-top: 8px;">${result.details}</div>
-                            </div>
-                        `;
                     } else {
+                        // Полная информация об ошибке
+                        let errorDetails = result.message || 'Неизвестная ошибка';
+                        if (result.details) {
+                            errorDetails += `\n\n${result.details}`;
+                        }
+                        if (result.status) {
+                            errorDetails = `Статус: ${result.status}\n` + errorDetails;
+                        }
+                        
+                        const bgColor = result.status === 'auth_error' ? '#fadbd8' : 
+                                       result.status === 'quota_error' ? '#fdebd0' :
+                                       result.status === 'model_error' ? '#fef5e7' : '#fadbd8';
+                        const textColor = result.status === 'auth_error' ? '#e74c3c' : 
+                                         result.status === 'quota_error' ? '#e67e22' :
+                                         result.status === 'model_error' ? '#f39c12' : '#c0392b';
+                        
                         html = `
-                            <div style="color: #c0392b; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #c0392b;">
-                                <div style="font-weight: bold; margin-bottom: 8px;">❌ ${result.message}</div>
-                                <div style="font-size: 12px; margin-top: 8px;">Деталь: ${result.details}</div>
+                            <div style="color: ${textColor}; background: ${bgColor}; padding: 12px; border-radius: 4px; border-left: 4px solid ${textColor}; white-space: pre-wrap; word-break: break-word;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">❌ ${errorDetails}</div>
                             </div>
                         `;
                     }
@@ -1428,13 +1427,20 @@
                     resultElement.innerHTML = html;
                     
                 } catch (error) {
-                    resultElement.innerHTML = `<div style="color: #e74c3c; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #e74c3c;">❌ Ошибка при проверке: ${error.message}</div>`;
+                    resultElement.innerHTML = `
+                        <div style="color: #c0392b; background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #c0392b; white-space: pre-wrap; word-break: break-word;">
+                            ❌ Ошибка при проверке ключа:
+                            Тип: ${error.name}
+                            Сообщение: ${error.message}
+                            Код: ${error.code || 'N/A'}
+                        </div>
+                    `;
                 }
             })();
         }
         
         function checkStatus() {
-            // Fire and forget - run in background
+            // Fire and forget - run in background with detailed error reporting
             (async () => {
                 try {
                     const response = await fetch(`${API_BASE}/health/integrations`);
@@ -1448,6 +1454,9 @@
                         document.getElementById('ozon-status').classList.remove('inactive');
                     } else {
                         document.getElementById('ozon-status').classList.add('inactive');
+                        if (data.ozon_api && data.ozon_api.error) {
+                            console.error('Ozon API Error:', data.ozon_api.error);
+                        }
                     }
                     
                     // Update OpenAI status
@@ -1455,11 +1464,18 @@
                         document.getElementById('ai-status').classList.remove('inactive');
                     } else {
                         document.getElementById('ai-status').classList.add('inactive');
+                        if (data.openai_api && data.openai_api.error) {
+                            console.error('OpenAI API Error:', data.openai_api.error);
+                        }
                     }
                 } catch (e) {
                     console.error('Error checking status:', e);
                     document.getElementById('ozon-status').classList.add('inactive');
                     document.getElementById('ai-status').classList.add('inactive');
+                    
+                    // Show detailed error
+                    const errorMsg = `❌ Ошибка проверки статуса:\n${e.message}\n\nТип: ${e.name}`;
+                    console.error(errorMsg);
                 }
             })();
         }
@@ -1501,7 +1517,17 @@
                     
                     if (!response.ok) {
                         const error = await response.json();
-                        throw new Error(error.detail || 'Ошибка при генерации');
+                        let errorMsg = error.detail || 'Ошибка при генерации ответа';
+                        
+                        // Add detailed error info
+                        if (error.error) {
+                            errorMsg += `\n\nДетали: ${error.error}`;
+                        }
+                        if (error.status) {
+                            errorMsg += `\nСтатус: ${error.status}`;
+                        }
+                        
+                        throw new Error(errorMsg);
                     }
                     
                     const result = await response.json();
@@ -1529,7 +1555,11 @@
                     
                 } catch (error) {
                     errorBox.style.display = 'block';
-                    document.getElementById('test-error-text').textContent = error.message;
+                    // Show detailed error with formatting
+                    const errorText = error.message || 'Неизвестная ошибка';
+                    document.getElementById('test-error-text').innerHTML = escapeHtml(errorText).replace(/\n/g, '<br>');
+                    document.getElementById('test-error-text').style.whiteSpace = 'pre-wrap';
+                    document.getElementById('test-error-text').style.wordBreak = 'break-word';
                     resultBox.style.display = 'none';
                 }
             })();
@@ -1924,7 +1954,12 @@
                     const response = await fetch(API_BASE + '/responses/drafts/' + reviewId);
                     const container = document.getElementById('drafts-container');
                     if (!response.ok) {
-                        container.innerHTML = '<div style="color:#7f8c8d; font-size:13px;">Черновиков пока нет</div>';
+                        const error = await response.json().catch(() => ({}));
+                        let errorMsg = 'Не удалось загрузить черновики';
+                        if (error.detail) {
+                            errorMsg += `: ${error.detail}`;
+                        }
+                        container.innerHTML = `<div style="color:#e74c3c; font-size:13px;">❌ ${errorMsg}</div>`;
                         return;
                     }
 
@@ -1941,7 +1976,8 @@
                     }).join('');
                 } catch (e) {
                     console.error('Error loading drafts:', e);
-                    document.getElementById('drafts-container').innerHTML = '<div style="color:#e74c3c; font-size:13px;">Не удалось загрузить черновики</div>';
+                    let errorMsg = e.message || 'Неизвестная ошибка';
+                    document.getElementById('drafts-container').innerHTML = `<div style="color:#e74c3c; font-size:13px;">❌ Ошибка загрузки: ${errorMsg}</div>`;
                 }
             })();
         }
@@ -1978,7 +2014,20 @@
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.detail || 'Ошибка при генерации');
+                    let errorMsg = error.detail || 'Ошибка при генерации ответа';
+                    
+                    // Add detailed error info
+                    if (error.error) {
+                        errorMsg += `\n\nДетали: ${error.error}`;
+                    }
+                    if (error.status) {
+                        errorMsg += `\nСтатус: ${error.status}`;
+                    }
+                    if (error.code) {
+                        errorMsg += `\nКод: ${error.code}`;
+                    }
+                    
+                    throw new Error(errorMsg);
                 }
 
                 const result = await response.json();
@@ -2002,7 +2051,9 @@
 
             } catch (err) {
                 console.error('AI generate error', err);
-                alert(`❌ Ошибка: ${err.message}`);
+                // Show full error with formatting
+                let errorMsg = err.message || 'Неизвестная ошибка';
+                alert(`❌ Ошибка генерации AI:\n\n${errorMsg}`);
             } finally {
                 btn.disabled = false;
                 btn.textContent = '⚡ Сгенерировать';
@@ -2038,11 +2089,23 @@
                         loadResponses();
                         alert('✅ Ответ успешно отправлен!');
                     } else {
-                        alert('❌ Ошибка при отправке ответа');
+                        const error = await response.json();
+                        let errorMsg = error.detail || 'Ошибка при отправке ответа';
+                        
+                        // Add detailed error info
+                        if (error.error) {
+                            errorMsg += `\n\nДетали: ${error.error}`;
+                        }
+                        if (error.status) {
+                            errorMsg += `\nСтатус: ${error.status}`;
+                        }
+                        
+                        throw new Error(errorMsg);
                     }
                 } catch (e) {
                     console.error('Error submitting response:', e);
-                    alert('❌ Ошибка: ' + e.message);
+                    let errorMsg = e.message || 'Неизвестная ошибка';
+                    alert(`❌ Ошибка при отправке ответа:\n\n${errorMsg}`);
                 }
             })();
         }
@@ -2107,138 +2170,6 @@
             if (newName && newName.trim()) {
                 localStorage.setItem(`product_name_${sku}`, newName.trim());
                 document.getElementById(`product-name-${sku}`).textContent = escapeHtml(newName.trim());
-            }
-        }
-
-        // Logs functions
-        async function downloadLogs() {
-            try {
-                const response = await fetch(`${API_BASE}/logs/download`);
-                if (!response.ok) {
-                    alert('❌ Ошибка при скачивании логов');
-                    return;
-                }
-                
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `logs-${new Date().toISOString().slice(0,10)}.log`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                showNotification('✅ Логи скачаны', 'success', 2000);
-            } catch (e) {
-                console.error('Error downloading logs:', e);
-                alert('❌ Ошибка: ' + e.message);
-            }
-        }
-
-        async function viewLogs() {
-            try {
-                const response = await fetch(`${API_BASE}/logs/tail?lines=100`);
-                const data = await response.json();
-                
-                if (!data.logs || data.logs.length === 0) {
-                    alert('📭 Логов не найдено');
-                    return;
-                }
-                
-                // Create modal with logs
-                const modal = document.createElement('div');
-                modal.className = 'modal active';
-                modal.id = 'logs-modal';
-                modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 900px;">
-                        <div class="modal-header">
-                            <h2>📋 Логи приложения (последние 100 строк)</h2>
-                            <button class="close-btn" onclick="document.getElementById('logs-modal').remove()">&times;</button>
-                        </div>
-                        <div style="background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 500px; overflow-y: auto; line-height: 1.4; white-space: pre-wrap; word-break: break-word;">
-                            ${data.logs.map(line => escapeHtml(line)).join('')}
-                        </div>
-                        <div style="margin-top: 15px; text-align: center;">
-                            <button class="btn btn-primary" onclick="downloadLogs()">📥 Скачать полные логи</button>
-                            <button class="btn btn-secondary" onclick="document.getElementById('logs-modal').remove()">Закрыть</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-            } catch (e) {
-                console.error('Error viewing logs:', e);
-                alert('❌ Ошибка при загрузке логов: ' + e.message);
-            }
-        }
-
-        async function getLogsSummary() {
-            try {
-                const response = await fetch(`${API_BASE}/logs/summary`);
-                const data = await response.json();
-                
-                if (data.status === 'error') {
-                    alert('⚠️ ' + data.message);
-                    return;
-                }
-                
-                // Create modal with summary
-                const modal = document.createElement('div');
-                modal.className = 'modal active';
-                modal.id = 'logs-summary-modal';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h2>📊 Резюме ошибок (последние 500 строк)</h2>
-                            <button class="close-btn" onclick="document.getElementById('logs-summary-modal').remove()">&times;</button>
-                        </div>
-                        
-                        <div style="margin-bottom: 20px;">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
-                                <div style="background: #fadbd8; padding: 15px; border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 24px; color: #e74c3c; font-weight: bold;">${data.error_count}</div>
-                                    <div style="color: #c0392b; font-size: 13px;">Ошибок</div>
-                                </div>
-                                <div style="background: #fef5e7; padding: 15px; border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 24px; color: #f39c12; font-weight: bold;">${data.warning_count}</div>
-                                    <div style="color: #e67e22; font-size: 13px;">Предупреждений</div>
-                                </div>
-                                <div style="background: #d6eaf8; padding: 15px; border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 24px; color: #3498db; font-weight: bold;">${data.info_count}</div>
-                                    <div style="color: #2980b9; font-size: 13px;">Информации</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        ${data.recent_errors.length > 0 ? `
-                            <div style="margin-bottom: 20px;">
-                                <h3 style="margin-bottom: 10px;">❌ Последние ошибки:</h3>
-                                <div style="background: #fadbd8; padding: 12px; border-radius: 4px; border-left: 4px solid #e74c3c; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
-                                    ${data.recent_errors.map(err => `<div style="margin-bottom: 8px; color: #c0392b;">${escapeHtml(err)}</div>`).join('')}
-                                </div>
-                            </div>
-                        ` : '<div style="color: #27ae60;">✅ Ошибок не найдено!</div>'}
-                        
-                        ${data.recent_warnings.length > 0 ? `
-                            <div style="margin-bottom: 20px;">
-                                <h3 style="margin-bottom: 10px;">⚠️ Последние предупреждения:</h3>
-                                <div style="background: #fef5e7; padding: 12px; border-radius: 4px; border-left: 4px solid #f39c12; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
-                                    ${data.recent_warnings.map(warn => `<div style="margin-bottom: 8px; color: #e67e22;">${escapeHtml(warn)}</div>`).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <div style="text-align: center; margin-top: 20px;">
-                            <button class="btn btn-primary" onclick="viewLogs()">📋 Показать все логи</button>
-                            <button class="btn btn-secondary" onclick="downloadLogs()">📥 Скачать логи</button>
-                            <button class="btn btn-secondary" onclick="document.getElementById('logs-summary-modal').remove()">Закрыть</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-            } catch (e) {
-                console.error('Error getting logs summary:', e);
-                alert('❌ Ошибка: ' + e.message);
             }
         }
     </script>
