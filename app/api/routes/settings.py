@@ -519,3 +519,86 @@ def set_ai_provider(payload: dict):
         "message": f"Using {provider} for AI generation"
     }
 
+
+@router.post("/yandex/check-key")
+async def check_yandex_key(payload: dict):
+    """
+    Detailed check of YandexGPT API key and credentials via backend
+    (Avoids CORS issues by making request from server)
+    
+    Returns:
+    {
+        "status": "success" | "auth_error" | "not_configured" | "api_error",
+        "is_valid": bool,
+        "message": str,
+        "details": str or null,
+        "model": str or null,
+        "available_models": [str]
+    }
+    """
+    from app.services.yandex_service import YandexGPTService
+    
+    api_key = payload.get("api_key", "").strip()
+    folder_id = payload.get("folder_id", "").strip()
+    model = payload.get("model", "yandexgpt-3").strip()
+    
+    if not api_key or not folder_id:
+        return {
+            "status": "not_configured",
+            "is_valid": False,
+            "message": "❌ API Key и Folder ID обязательны",
+            "details": "Установите оба параметра для проверки подключения",
+            "available_models": YandexGPTService.AVAILABLE_MODELS
+        }
+    
+    try:
+        logger.info("Testing YandexGPT API key and credentials...")
+        
+        # Create service with provided credentials
+        service = YandexGPTService(api_key=api_key, folder_id=folder_id, model=model)
+        
+        # Check API health
+        health = await service.check_api_health()
+        
+        if health.get("available"):
+            logger.info(f"✅ YandexGPT API is valid! Model: {model}")
+            return {
+                "status": "success",
+                "is_valid": True,
+                "message": "✅ YandexGPT подключение работает!",
+                "model": model,
+                "available_models": YandexGPTService.AVAILABLE_MODELS
+            }
+        else:
+            error = health.get("error", "Unknown error")
+            logger.warning(f"YandexGPT API error: {error}")
+            
+            # Check if it's an auth error (401/403)
+            if "401" in str(error) or "403" in str(error) or "unauthorized" in str(error).lower():
+                return {
+                    "status": "auth_error",
+                    "is_valid": False,
+                    "message": "❌ Ошибка аутентификации (401/403)",
+                    "details": "API Key неправильный или удален. Проверьте ключ в Яндекс.Облаке",
+                    "available_models": YandexGPTService.AVAILABLE_MODELS
+                }
+            else:
+                return {
+                    "status": "api_error",
+                    "is_valid": False,
+                    "message": f"❌ Ошибка API: {error}",
+                    "details": "Проверьте корректность Folder ID и права доступа сервисного аккаунта",
+                    "available_models": YandexGPTService.AVAILABLE_MODELS
+                }
+    
+    except Exception as e:
+        logger.error(f"YandexGPT check failed: {str(e)}")
+        return {
+            "status": "api_error",
+            "is_valid": False,
+            "message": "❌ Ошибка при проверке подключения",
+            "details": str(e)[:200],
+            "available_models": YandexGPTService.AVAILABLE_MODELS
+        }
+
+

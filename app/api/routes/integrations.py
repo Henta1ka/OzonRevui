@@ -130,3 +130,54 @@ async def test_openai_connection(credentials: dict = Body(...)):
             "message": f"❌ Error: {str(e)}",
             "configured": False
         }
+
+
+@router.post("/test-yandex")
+async def test_yandex_connection(credentials: dict = Body(...)):
+    """Test YandexGPT API connection"""
+    try:
+        from app.services.yandex_service import YandexGPTService
+        
+        api_key = credentials.get("api_key")
+        folder_id = credentials.get("folder_id")
+        model = credentials.get("model", "yandexgpt-3")
+        
+        if not api_key or not folder_id:
+            return {
+                "status": "error",
+                "message": "❌ API Key and Folder ID required",
+                "configured": False
+            }
+        
+        # Create service with provided credentials
+        service = YandexGPTService(api_key=api_key, folder_id=folder_id, model=model)
+        
+        # Check API health
+        result = await service.check_api_health()
+        
+        if result.get("available"):
+            return {
+                "status": "success",
+                "message": "✅ YandexGPT API connection successful!",
+                "configured": True,
+                "data": {
+                    "model": result.get("model"),
+                    "available": result.get("available")
+                }
+            }
+        else:
+            error_msg = result.get("error", "Unknown error")
+            return {
+                "status": "error",
+                "message": f"❌ YandexGPT API error: {error_msg}",
+                "configured": False,
+                "error_details": error_msg
+            }
+    except Exception as e:
+        logger.error(f"YandexGPT test error: {e}")
+        return {
+            "status": "error",
+            "message": f"❌ Error: {str(e)}",
+            "configured": False,
+            "error_details": str(e)
+        }
