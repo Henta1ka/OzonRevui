@@ -48,10 +48,8 @@ class YandexGPTService:
 
     def _has_credentials(self) -> bool:
         """Check if credentials are configured"""
-        if not self.api_key or not self.folder_id:
-            return False
-        placeholder_prefixes = ["your_", "AQV", "aqv"]
-        return not any(self.api_key.lower().startswith(pref) for pref in placeholder_prefixes)
+        # Consider credentials set if non-empty
+        return bool(self.api_key and self.folder_id)
     
     def set_model(self, model: str) -> bool:
         """Change the model to use"""
