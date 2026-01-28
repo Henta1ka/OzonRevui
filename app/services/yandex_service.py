@@ -11,8 +11,14 @@ logger = logging.getLogger(__name__)
 class YandexGPTService:
     """Service for generating response drafts using YandexGPT"""
     
-    AVAILABLE_MODELS = ["yandexgpt-3", "yandexgpt-3-lite", "yandexgpt-4"]
-    API_URL = "https://llm.api.cloud.yandex.net/llm/v1/completions"
+    # Yandex Cloud docs: https://cloud.yandex.ru/docs/ai/yandexgpt/api-ref/Completion
+    AVAILABLE_MODELS = [
+        "yandexgpt-lite",
+        "yandexgpt-3",
+        "yandexgpt-3-lite",
+        "yandexgpt-4"
+    ]
+    API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     
     SENTIMENT_PROMPT = """Проанализируй тональность отзыва и ответь ТОЛЬКО одним словом: положительная, нейтральная или отрицательная.
 Отзыв: {review_text}"""
@@ -57,7 +63,7 @@ class YandexGPTService:
         return True
     
     async def check_api_health(self) -> Dict[str, Any]:
-        """Check YandexGPT API health"""
+        """Check YandexGPT API health from the backend (no CORS)"""
         if not self._has_credentials():
             return {
                 "available": False,
@@ -65,6 +71,17 @@ class YandexGPTService:
                 "error": "YandexGPT credentials not configured"
             }
         
+        payload = {
+            "modelUri": f"gpt://{self.folder_id}/{self.model}",
+            "completionOptions": {
+                "stream": False,
+                "maxTokens": 20,
+                "temperature": 0
+            },
+            "messages": [
+                {"role": "user", "text": "ping"}
+            ]
+        }
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 response = await client.post(
@@ -73,11 +90,7 @@ class YandexGPTService:
                         "Authorization": f"Api-Key {self.api_key}",
                         "Content-Type": "application/json"
                     },
-                    json={
-                        "model_uri": f"gpt://{self.folder_id}/{self.model}",
-                        "completion_options": {"stream": False, "temperature": 0.3, "max_tokens": 50},
-                        "messages": [{"role": "user", "content": "test"}]
-                    }
+                    json=payload
                 )
                 
                 if response.status_code == 200:
@@ -88,14 +101,15 @@ class YandexGPTService:
                         "model": self.model,
                         "quota_exceeded": False
                     }
-                else:
-                    logger.warning(f"YandexGPT API error: {response.status_code}")
-                    return {
-                        "available": False,
-                        "credentials_set": True,
-                        "error": f"API error: {response.status_code}",
-                        "quota_exceeded": response.status_code == 429
-                    }
+                # return details for troubleshooting
+                logger.warning(f"YandexGPT API error: {response.status_code} {response.text}")
+                return {
+                    "available": False,
+                    "credentials_set": True,
+                    "error": f"API error: {response.status_code}",
+                    "details": response.text,
+                    "quota_exceeded": response.status_code == 429
+                }
         except Exception as e:
             logger.error(f"YandexGPT health check failed: {e}")
             return {
@@ -110,6 +124,15 @@ class YandexGPTService:
             logger.error("YandexGPT credentials not set")
             return None
         
+        payload = {
+            "modelUri": f"gpt://{self.folder_id}/{self.model}",
+            "completionOptions": {
+                "stream": False,
+                "temperature": temperature,
+                "maxTokens": 200
+            },
+            "messages": [{"role": "user", "text": prompt}]
+        }
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.post(
@@ -118,15 +141,7 @@ class YandexGPTService:
                         "Authorization": f"Api-Key {self.api_key}",
                         "Content-Type": "application/json"
                     },
-                    json={
-                        "model_uri": f"gpt://{self.folder_id}/{self.model}",
-                        "completion_options": {
-                            "stream": False,
-                            "temperature": temperature,
-                            "max_tokens": 200
-                        },
-                        "messages": [{"role": "user", "content": prompt}]
-                    }
+                    json=payload
                 )
                 
                 if response.status_code == 200:
@@ -134,7 +149,7 @@ class YandexGPTService:
                     result = data.get("result", {})
                     choices = result.get("alternatives", [])
                     if choices:
-                        return choices[0].get("message", {}).get("content", "").strip()
+                        return choices[0].get("message", {}).get("text", "").strip()
                 elif response.status_code == 429:
                     self.quota_exceeded = True
                     logger.error("YandexGPT quota exceeded")
