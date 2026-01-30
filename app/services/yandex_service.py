@@ -11,14 +11,14 @@ logger = logging.getLogger(__name__)
 class YandexGPTService:
     """Service for generating response drafts using YandexGPT"""
     
-    # Yandex Cloud docs: https://cloud.yandex.ru/docs/ai/yandexgpt/api-ref/Completion
+    # Yandex Cloud chat models (technical ids)
+    # Docs: https://cloud.yandex.ru/docs/ai/yandexgpt/api-ref/Completion
     AVAILABLE_MODELS = [
+        "yandexgpt",
         "yandexgpt-lite",
-        "yandexgpt-3",
-        "yandexgpt-3-lite",
-        "yandexgpt-4"
+        "yandexgpt-pro"
     ]
-    API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+    API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/chat/completions"
     
     SENTIMENT_PROMPT = """Проанализируй тональность отзыва и ответь ТОЛЬКО одним словом: положительная, нейтральная или отрицательная.
 Отзыв: {review_text}"""
@@ -50,6 +50,29 @@ class YandexGPTService:
         """Check if credentials are configured"""
         # Consider credentials set if non-empty
         return bool(self.api_key and self.folder_id)
+
+    def _safe_details(self, resp: httpx.Response) -> str:
+        """Return trimmed response body for diagnostics"""
+        try:
+            text = resp.text or ""
+            if len(text) > 1500:
+                text = text[:1500] + "...(truncated)"
+            return text
+        except Exception:
+            return ""
+
+    def _auth_hint(self, resp: httpx.Response) -> str:
+        """Provide hints for 401/403"""
+        body = self._safe_details(resp)
+        hint = (
+            "Check:\n"
+            "1) Api-Key is SECRET (not key id).\n"
+            "2) Header: Authorization: Api-Key <SECRET>.\n"
+            "3) Model must be yandexgpt / yandexgpt-lite / yandexgpt-pro.\n"
+            "4) modelUri: gpt://<folder_id>/<model>.\n"
+            "5) Service account has ai.languageModels.user on the folder."
+        )
+        return hint + (f"\nAPI response:\n{body}" if body else "")
     
     def set_model(self, model: str) -> bool:
         """Change the model to use"""
@@ -61,27 +84,38 @@ class YandexGPTService:
         return True
     
     async def check_api_health(self) -> Dict[str, Any]:
-        """Check YandexGPT API health from the backend (no CORS)"""
-        if not self._has_credentials():
+        """Health check using chat/completions endpoint."""
+        if not self.api_key:
             return {
                 "available": False,
                 "credentials_set": False,
-                "error": "YandexGPT credentials not configured"
+                "model": self.model,
+                "error": "Missing API key",
+                "details": "Укажите секретный Api-Key (не ID ключа)"
             }
-        
+        if not self.folder_id:
+            return {
+                "available": False,
+                "credentials_set": True,
+                "model": self.model,
+                "error": "Missing Folder ID",
+                "details": "Укажите Folder ID (b1...)"
+            }
+
+        model_uri = f"gpt://{self.folder_id}/{self.model}"
         payload = {
-            "modelUri": f"gpt://{self.folder_id}/{self.model}",
+            "modelUri": model_uri,
             "completionOptions": {
                 "stream": False,
-                "maxTokens": 20,
-                "temperature": 0
+                "temperature": 0.0,
+                "maxTokens": 5
             },
-            "messages": [
-                {"role": "user", "text": "ping"}
-            ]
+            "messages": [{"role": "user", "text": "ping"}]
         }
+
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            timeout = httpx.Timeout(connect=10.0, read=20.0, write=10.0, pool=10.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     self.API_URL,
                     headers={
@@ -90,34 +124,94 @@ class YandexGPTService:
                     },
                     json=payload
                 )
-                
-                if response.status_code == 200:
-                    logger.info("✅ YandexGPT API is healthy")
-                    return {
-                        "available": True,
-                        "credentials_set": True,
-                        "model": self.model,
-                        "quota_exceeded": False
-                    }
-                # return details for troubleshooting
-                logger.warning(f"YandexGPT API error: {response.status_code} {response.text}")
+
+            if response.status_code == 200:
+                return {
+                    "available": True,
+                    "credentials_set": True,
+                    "model": self.model,
+                    "model_uri": model_uri,
+                    "quota_exceeded": False,
+                    "status_code": response.status_code,
+                }
+
+            if response.status_code == 429:
                 return {
                     "available": False,
                     "credentials_set": True,
-                    "error": f"API error: {response.status_code}",
-                    "details": response.text,
-                    "quota_exceeded": response.status_code == 429
+                    "model": self.model,
+                    "model_uri": model_uri,
+                    "quota_exceeded": True,
+                    "status_code": response.status_code,
+                    "error": "Rate limit / quota exceeded (429)",
+                    "details": self._safe_details(response),
                 }
-        except Exception as e:
-            logger.error(f"YandexGPT health check failed: {e}")
+
+            if response.status_code in (401, 403):
+                return {
+                    "available": False,
+                    "credentials_set": True,
+                    "model": self.model,
+                    "model_uri": model_uri,
+                    "quota_exceeded": False,
+                    "status_code": response.status_code,
+                    "error": "Authentication/authorization failed (401/403)",
+                    "details": self._auth_hint(response),
+                }
+
+            if response.status_code == 404:
+                return {
+                    "available": False,
+                    "credentials_set": True,
+                    "model": self.model,
+                    "model_uri": model_uri,
+                    "quota_exceeded": False,
+                    "status_code": response.status_code,
+                    "error": "Endpoint not found (404)",
+                    "details": "Use /foundationModels/v1/chat/completions for YandexGPT chat models.",
+                }
+
             return {
                 "available": False,
                 "credentials_set": True,
-                "error": str(e)
+                "model": self.model,
+                "model_uri": model_uri,
+                "quota_exceeded": False,
+                "status_code": response.status_code,
+                "error": f"API error: HTTP {response.status_code}",
+                "details": self._safe_details(response),
+            }
+
+        except httpx.ConnectError as e:
+            return {
+                "available": False,
+                "credentials_set": True,
+                "model": self.model,
+                "model_uri": model_uri,
+                "error": "Network connect error to Yandex LLM API.",
+                "details": str(e),
+            }
+        except httpx.ReadTimeout as e:
+            return {
+                "available": False,
+                "credentials_set": True,
+                "model": self.model,
+                "model_uri": model_uri,
+                "error": "Timeout while calling Yandex LLM API.",
+                "details": str(e),
+            }
+        except Exception as e:
+            return {
+                "available": False,
+                "credentials_set": True,
+                "model": self.model,
+                "model_uri": model_uri,
+                "error": "Unexpected error while checking YandexGPT.",
+                "details": str(e),
             }
     
     async def _call_api(self, prompt: str, temperature: float = 0.7) -> Optional[str]:
-        """Make a call to YandexGPT API"""
+        """Make a call to YandexGPT chat API"""
         if not self._has_credentials():
             logger.error("YandexGPT credentials not set")
             return None
