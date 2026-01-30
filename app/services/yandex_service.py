@@ -18,7 +18,8 @@ class YandexGPTService:
         "yandexgpt-lite",
         "yandexgpt-pro"
     ]
-    API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/chat/completions"
+    # REST endpoint for chat-style completion
+    API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     
     SENTIMENT_PROMPT = """Проанализируй тональность отзыва и ответь ТОЛЬКО одним словом: положительная, нейтральная или отрицательная.
 Отзыв: {review_text}"""
@@ -84,7 +85,7 @@ class YandexGPTService:
         return True
     
     async def check_api_health(self) -> Dict[str, Any]:
-        """Health check using chat/completions endpoint."""
+        """Health check using completion endpoint."""
         if not self.api_key:
             return {
                 "available": False,
@@ -167,8 +168,8 @@ class YandexGPTService:
                     "model_uri": model_uri,
                     "quota_exceeded": False,
                     "status_code": response.status_code,
-                    "error": "Endpoint not found (404)",
-                    "details": "Use /foundationModels/v1/chat/completions for YandexGPT chat models.",
+                    "error": "Endpoint or model not found (404)",
+                    "details": "Ensure URL /foundationModels/v1/completion and modelUri gpt://<folder>/<model>." + (f"\nAPI response: {self._safe_details(response)}"),
                 }
 
             return {
