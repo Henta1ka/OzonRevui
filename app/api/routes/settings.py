@@ -546,13 +546,21 @@ async def check_yandex_key(payload: dict = None):
     # Use provided credentials or fall back to config
     if payload is None:
         payload = {}
-    
+
     # Get directly from environment or fallback to settings
     api_key = (payload.get("api_key", "") or os.getenv("YANDEX_API_KEY") or settings.yandex_api_key or "").strip()
     folder_id = (payload.get("folder_id", "") or os.getenv("YANDEX_FOLDER_ID") or settings.yandex_folder_id or "").strip()
     model = (payload.get("model", "") or os.getenv("YANDEX_MODEL") or settings.yandex_model or "yandexgpt-3").strip()
-    
-    logger.info(f"check_yandex_key: api_key={'SET' if api_key else 'EMPTY'}, folder_id={folder_id}, model={model}")
+
+    logger.info(
+        "check_yandex_key: received api_key_len=%s folder_id=%s model=%s payload=%s env_key_set=%s env_folder=%s",
+        len(api_key),
+        folder_id,
+        model,
+        {k: ('***' if k == 'api_key' else v) for k, v in payload.items()},
+        'SET' if os.getenv('YANDEX_API_KEY') else 'EMPTY',
+        os.getenv('YANDEX_FOLDER_ID') or ''
+    )
     
     if not api_key or not folder_id:
         return {
