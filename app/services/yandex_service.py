@@ -46,11 +46,16 @@ class YandexGPTService:
         self.folder_id = folder_id or settings.yandex_folder_id
         self.model = model or settings.yandex_model
         self.quota_exceeded = False
+        
+        # Debug logging
+        logger.info(f"YandexGPT init: api_key={'SET' if self.api_key else 'EMPTY'}, folder_id={self.folder_id}, model={self.model}")
 
     def _has_credentials(self) -> bool:
         """Check if credentials are configured"""
         # Consider credentials set if non-empty
-        return bool(self.api_key and self.folder_id)
+        has_creds = bool(self.api_key and self.folder_id)
+        logger.info(f"_has_credentials check: api_key={'SET' if self.api_key else 'EMPTY'}, folder_id={self.folder_id}, result={has_creds}")
+        return has_creds
 
     def _safe_details(self, resp: httpx.Response) -> str:
         """Return trimmed response body for diagnostics"""
