@@ -537,14 +537,22 @@ async def check_yandex_key(payload: dict = None):
     }
     """
     from app.services.yandex_service import YandexGPTService
+    import os
+    from dotenv import load_dotenv
+    
+    # Reload .env to pick up recent changes
+    load_dotenv(".env", override=True)
     
     # Use provided credentials or fall back to config
     if payload is None:
         payload = {}
     
-    api_key = (payload.get("api_key", "") or settings.yandex_api_key or "").strip()
-    folder_id = (payload.get("folder_id", "") or settings.yandex_folder_id or "").strip()
-    model = (payload.get("model", "") or settings.yandex_model or "yandexgpt-3").strip()
+    # Get directly from environment or fallback to settings
+    api_key = (payload.get("api_key", "") or os.getenv("YANDEX_API_KEY") or settings.yandex_api_key or "").strip()
+    folder_id = (payload.get("folder_id", "") or os.getenv("YANDEX_FOLDER_ID") or settings.yandex_folder_id or "").strip()
+    model = (payload.get("model", "") or os.getenv("YANDEX_MODEL") or settings.yandex_model or "yandexgpt-3").strip()
+    
+    logger.info(f"check_yandex_key: api_key={'SET' if api_key else 'EMPTY'}, folder_id={folder_id}, model={model}")
     
     if not api_key or not folder_id:
         return {
