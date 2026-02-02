@@ -103,7 +103,8 @@ class YandexGPTService:
                 "details": "Укажите Folder ID (b1...)"
             }
 
-        model_uri = f"gpt://{self.folder_id}/{self.model}"
+        # Yandex requires /latest suffix on model URI
+        model_uri = f"gpt://{self.folder_id}/{self.model}/latest"
         payload = {
             "modelUri": model_uri,
             "completionOptions": {
@@ -218,7 +219,7 @@ class YandexGPTService:
             return None
         
         payload = {
-            "modelUri": f"gpt://{self.folder_id}/{self.model}",
+            "modelUri": f"gpt://{self.folder_id}/{self.model}/latest",
             "completionOptions": {
                 "stream": False,
                 "temperature": temperature,
