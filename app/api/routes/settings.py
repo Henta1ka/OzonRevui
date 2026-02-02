@@ -521,7 +521,7 @@ def set_ai_provider(payload: dict):
 
 
 @router.post("/yandex/check-key")
-async def check_yandex_key(payload: dict):
+async def check_yandex_key(payload: dict = None):
     """
     Detailed check of YandexGPT API key and credentials via backend
     (Avoids CORS issues by making request from server)
@@ -538,9 +538,13 @@ async def check_yandex_key(payload: dict):
     """
     from app.services.yandex_service import YandexGPTService
     
-    api_key = payload.get("api_key", "").strip()
-    folder_id = payload.get("folder_id", "").strip()
-    model = payload.get("model", "yandexgpt-3").strip()
+    # Use provided credentials or fall back to config
+    if payload is None:
+        payload = {}
+    
+    api_key = (payload.get("api_key", "") or settings.yandex_api_key or "").strip()
+    folder_id = (payload.get("folder_id", "") or settings.yandex_folder_id or "").strip()
+    model = (payload.get("model", "") or settings.yandex_model or "yandexgpt-3").strip()
     
     if not api_key or not folder_id:
         return {
