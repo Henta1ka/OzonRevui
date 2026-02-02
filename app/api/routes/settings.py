@@ -591,6 +591,8 @@ async def check_yandex_key(payload: dict = None):
             }
         else:
             error = health.get("error", "Unknown error")
+            details = health.get("details")
+            status_code = health.get("status_code")
             logger.warning(f"YandexGPT API error: {error}")
             
             # Check if it's an auth error (401/403)
@@ -599,7 +601,7 @@ async def check_yandex_key(payload: dict = None):
                     "status": "auth_error",
                     "is_valid": False,
                     "message": "❌ Ошибка аутентификации (401/403)",
-                    "details": "API Key неправильный или удален. Проверьте ключ в Яндекс.Облаке",
+                    "details": details or "API Key неправильный или удален. Проверьте ключ в Яндекс.Облаке",
                     "available_models": YandexGPTService.AVAILABLE_MODELS
                 }
             else:
@@ -607,7 +609,8 @@ async def check_yandex_key(payload: dict = None):
                     "status": "api_error",
                     "is_valid": False,
                     "message": f"❌ Ошибка API: {error}",
-                    "details": "Проверьте корректность Folder ID и права доступа сервисного аккаунта",
+                    "details": details or "Проверьте корректность Folder ID и права доступа сервисного аккаунта",
+                    "status_code": status_code,
                     "available_models": YandexGPTService.AVAILABLE_MODELS
                 }
     
