@@ -627,9 +627,8 @@
                     <div class="form-group">
                         <label>Модель</label>
                         <select id="yandex-model">
-                            <option value="yandexgpt">YandexGPT (стандарт)</option>
-                            <option value="yandexgpt-lite">YandexGPT Lite (экономно)</option>
-                            <option value="yandexgpt-pro">YandexGPT Pro (точнее)</option>
+                            <option value="yandexgpt-3">YandexGPT 3 (63% точность)</option>
+                            <option value="yandexgpt-3-pro">YandexGPT 3 Pro (специализированная)</option>
                         </select>
                     </div>
                     <div class="action-buttons">
@@ -888,7 +887,7 @@
         async function checkYandexHealth() {
             const key = document.getElementById('yandex-api-key').value;
             const folderId = document.getElementById('yandex-folder-id').value;
-            const model = document.getElementById('yandex-model').value || 'yandexgpt';
+            const model = document.getElementById('yandex-model').value || 'yandexgpt-3';
             const msg = document.getElementById('yandex-status-msg');
             
             if (!key || !folderId) {
@@ -1085,7 +1084,7 @@
                         } else {
                             const apiKey = document.getElementById('yandex-api-key').value;
                             const folderId = document.getElementById('yandex-folder-id').value;
-                            const model = document.getElementById('yandex-model')?.value || 'yandexgpt';
+                            const model = document.getElementById('yandex-model')?.value || 'yandexgpt-3';
                             
                             if (!apiKey || !folderId) {
                                 showMessage(msgElement, '❌ Укажи API Key и Folder ID для YandexGPT!', 'error');

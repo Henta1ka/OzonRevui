@@ -11,12 +11,11 @@ logger = logging.getLogger(__name__)
 class YandexGPTService:
     """Service for generating response drafts using YandexGPT"""
     
-    # Yandex Cloud chat models (technical ids)
+    # Yandex Cloud official models (third generation)
     # Docs: https://cloud.yandex.ru/docs/ai/yandexgpt/api-ref/Completion
     AVAILABLE_MODELS = [
-        "yandexgpt",
-        "yandexgpt-lite",
-        "yandexgpt-pro"
+        "yandexgpt-3",
+        "yandexgpt-3-pro"
     ]
     # REST endpoint for chat-style completion
     API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
