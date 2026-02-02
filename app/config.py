@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # YandexGPT API
     yandex_api_key: str = ""
     yandex_folder_id: str = ""
-    yandex_model: str = "yandexgpt-3"  # yandexgpt-3, yandexgpt-3-lite, yandexgpt-4
+    yandex_model: str = "yandexgpt"  # yandexgpt, yandexgpt-lite, yandexgpt-pro
     
     # AI Provider selection
     ai_provider: str = "openai"  # openai or yandex
